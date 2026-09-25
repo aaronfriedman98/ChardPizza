@@ -1,22 +1,32 @@
 @import "tailwindcss";
 
-/* Brand tokens. Char = near-black crust, ember = orange heat, cream = flour. */
+/* Brand tokens. Char = near-black crust, ember = heat, amber = the flyer gold, cream = flour. */
 :root {
   --char: #1b1614;
+  --coal: #141110;
   --ember: #e4572e;
+  --amber: #f2a33a;
+  --brick: #c8551e;
   --cream: #f7f1e8;
+  --flour: #f3ebdd;
   --ink: #2a2321;
   --line: #e8e0d4;
 }
 
 @theme inline {
   --color-char: var(--char);
+  --color-coal: var(--coal);
   --color-ember: var(--ember);
+  --color-amber: var(--amber);
+  --color-brick: var(--brick);
   --color-cream: var(--cream);
+  --color-flour: var(--flour);
   --color-ink: var(--ink);
   --color-line: var(--line);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-anton), Impact, "Arial Narrow Bold", sans-serif;
+  --font-body: var(--font-poppins), system-ui, sans-serif;
 }
 
 body {
@@ -32,4 +42,89 @@ body {
   .input { @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-base outline-none focus:border-ember focus:ring-2 focus:ring-ember/20; }
   .btn-primary { @apply inline-flex items-center justify-center rounded-xl bg-ember px-4 py-2.5 font-semibold text-white transition hover:bg-ember/90 disabled:opacity-60; }
   .btn-ghost { @apply inline-flex items-center justify-center rounded-xl px-3 py-2 font-medium text-ink/70 transition hover:bg-cream hover:text-ink; }
+}
+
+/* ---------------------------------------------------------------------------
+   Public site theme: dark, textured, amber.
+   --------------------------------------------------------------------------- */
+.public-theme {
+  background: var(--coal);
+  color: var(--flour);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  position: relative;
+  isolation: isolate;
+}
+.public-theme::before {
+  /* film grain */
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.public-theme > * { position: relative; z-index: 1; }
+
+.ember-glow {
+  background:
+    radial-gradient(60% 45% at 50% 100%, rgba(242, 163, 58, 0.35), transparent 70%),
+    radial-gradient(40% 30% at 30% 90%, rgba(200, 85, 30, 0.35), transparent 70%),
+    radial-gradient(30% 25% at 70% 95%, rgba(255, 217, 122, 0.18), transparent 70%);
+}
+
+.torn-bottom { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), 96% 100%, 91% calc(100% - 9px), 85% calc(100% - 2px), 79% calc(100% - 12px), 72% calc(100% - 5px), 66% calc(100% - 14px), 59% calc(100% - 4px), 52% calc(100% - 11px), 45% calc(100% - 1px), 38% calc(100% - 13px), 31% calc(100% - 6px), 24% calc(100% - 12px), 17% calc(100% - 3px), 10% calc(100% - 10px), 4% calc(100% - 4px), 0 calc(100% - 12px)); }
+.torn-top { clip-path: polygon(0 12px, 4% 4px, 10% 10px, 17% 3px, 24% 12px, 31% 6px, 38% 13px, 45% 1px, 52% 11px, 59% 4px, 66% 14px, 72% 5px, 79% 12px, 85% 2px, 91% 9px, 96% 0, 100% 14px, 100% 100%, 0 100%); }
+
+.brush {
+  /* amber brush-stroke highlight behind text, like the flyer */
+  background: var(--amber);
+  color: var(--coal);
+  clip-path: polygon(1% 12%, 99% 4%, 100% 88%, 2% 96%);
+  padding: 0.15em 0.45em;
+  display: inline-block;
+}
+
+@layer components {
+  .btn-amber {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-amber px-6 py-3.5 text-base font-bold uppercase tracking-wider text-coal transition;
+    box-shadow: 0 10px 30px -10px rgba(242, 163, 58, 0.7);
+  }
+  .btn-amber:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn-amber:disabled { opacity: 0.5; transform: none; filter: none; }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-flour/25 px-5 py-3 text-base font-semibold text-flour transition hover:border-amber hover:text-amber;
+  }
+  .field {
+    @apply w-full rounded-xl border border-flour/15 bg-white/[0.04] px-4 py-3.5 text-base text-flour outline-none placeholder:text-flour/35 focus:border-amber focus:ring-2 focus:ring-amber/25;
+  }
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1) translateY(0); opacity: 1; }
+  30% { transform: scaleY(1.04) translateY(-1px); opacity: 0.95; }
+  60% { transform: scaleY(0.97) translateY(1px); opacity: 1; }
+  80% { transform: scaleY(1.02) translateY(-0.5px); opacity: 0.97; }
+}
+.flicker { animation: flicker 2.4s ease-in-out infinite; transform-origin: 50% 90%; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.rise-1 { animation-delay: 0.08s; }
+.rise-2 { animation-delay: 0.16s; }
+.rise-3 { animation-delay: 0.24s; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.slide-in { animation: slide-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flicker, .rise, .slide-in { animation: none; }
 }
