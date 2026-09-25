@@ -26,6 +26,10 @@ export default async function ServiceBoardPage({ searchParams }: PageProps<"/adm
     );
   }
 
-  const orders = await loadServiceOrders(supabase, service.id);
-  return <ServiceBoard service={service} availability={availability} orders={orders} settings={settings} candidates={candidates} />;
+  const [orders, { data: smi }] = await Promise.all([
+    loadServiceOrders(supabase, service.id),
+    supabase.from("service_menu_items").select("menu_items(name, capacity_units)").eq("service_id", service.id).order("sort_order"),
+  ]);
+  const typeOrder = ((smi ?? []) as unknown as { menu_items: { name: string; capacity_units: number } }[]).filter((r) => Number(r.menu_items.capacity_units) > 0).map((r) => r.menu_items.name);
+  return <ServiceBoard service={service} availability={availability} orders={orders} settings={settings} candidates={candidates} typeOrder={typeOrder} />;
 }

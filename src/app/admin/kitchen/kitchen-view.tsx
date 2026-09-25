@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { Service, ServiceAvailability, ServiceWaste, Settings } from "@/lib/types";
-import { type Order, queueSort, tallyItems, minutesBehind, firstName } from "@/lib/orders";
+import { type Order, queueSort, minutesBehind, firstName } from "@/lib/orders";
 import { fmtTime } from "@/lib/time";
 import { LiveRefresh } from "@/components/admin/live-refresh";
+import { CallSheet } from "@/components/admin/call-sheet";
 import { Modal } from "@/components/ui/modal";
 import { setOrderStatus } from "@/app/admin/orders/actions";
 import { deleteWaste, logWaste } from "@/app/admin/orders/waste-actions";
@@ -54,21 +55,6 @@ export function KitchenView({
   const held = queue.filter((o) => o.is_on_hold);
   const readyCount = orders.filter((o) => o.status === "ready").length;
 
-  // Demand by time window: what is owed by each upcoming slot, and the running total.
-  const windows = useMemo(() => {
-    const m = new Map<string, Order[]>();
-    for (const o of active) m.set(o.scheduled_at, [...(m.get(o.scheduled_at) ?? []), o]);
-    const sorted = Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    let cumulative: Order[] = [];
-    return sorted.map(([time, list]) => {
-      cumulative = [...cumulative, ...list];
-      return { time, items: tallyItems(list), cumulative: tallyItems(cumulative), orders: list.length, late: new Date(time) < now };
-    });
-  }, [active, now]);
-
-  const priorityNow = active.filter((o) => o.is_rush || o.customer_arrived);
-  const nextWindow = windows.find((w) => !w.late) ?? windows[0];
-  const makeNow = tallyItems([...priorityNow, ...active.filter((o) => new Date(o.scheduled_at) <= new Date(now.getTime() + 30 * 60000))]);
 
   function run(fn: () => Promise<{ error?: string }>) {
     startTransition(async () => {
@@ -96,65 +82,7 @@ export function KitchenView({
       </div>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" onClick={() => setError(null)}>{error}</p>}
 
-      {/* MAKE NOW */}
-      <section className="rounded-2xl bg-char p-4 text-white">
-        <div className="flex items-baseline justify-between">
-          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-amber">Make now</div>
-          <div className="text-xs text-white/60">next 30 min, plus rush and customers who are here</div>
-        </div>
-        {makeNow.length === 0 ? (
-          <div className="mt-1 text-white/60">Nothing owed yet.</div>
-        ) : (
-          <div className="mt-2 flex flex-wrap gap-x-10 gap-y-2">
-            {makeNow.map((b) => (
-              <div key={b.name} className="flex items-baseline gap-2">
-                <span className="font-display text-6xl font-black text-amber tabular-nums">{b.qty}</span>
-                <span className="text-2xl font-semibold">{b.name}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {priorityNow.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            {priorityNow.map((o) => (
-              <span key={o.id} className="rounded-full bg-white/10 px-3 py-1">
-                {o.is_rush ? "RUSH" : "HERE"} · {firstName(o)} · {o.order_items.map((it) => `${it.quantity} ${it.item_name}`).join(", ")}
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* DEMAND BY TIME */}
-      <section className="card p-0">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h2 className="font-bold">What&rsquo;s owed, by time</h2>
-          <span className="text-xs text-ink/50">running total on the right</span>
-        </div>
-        <ul className="divide-y divide-line">
-          {windows.length === 0 && <li className="px-4 py-3 text-ink/50">Queue is empty.</li>}
-          {windows.map((w) => (
-            <li key={w.time} className={`flex items-center gap-3 px-4 py-2.5 ${w === nextWindow ? "bg-amber-50" : ""} ${w.late ? "text-red-700" : ""}`}>
-              <div className="w-20 font-display text-xl tabular-nums">{fmtTime(w.time, tz)}</div>
-              <div className="flex flex-1 flex-wrap gap-x-5 gap-y-1">
-                {w.items.map((it) => (
-                  <span key={it.name} className="text-lg">
-                    <b className="text-ember">{it.qty}</b> {it.name}
-                  </span>
-                ))}
-                <span className="text-xs text-ink/40 self-center">{w.orders} order{w.orders === 1 ? "" : "s"}</span>
-              </div>
-              <div className="hidden sm:flex flex-wrap justify-end gap-x-3 text-sm text-ink/50 tabular-nums">
-                {w.cumulative.map((it) => (
-                  <span key={it.name}>
-                    {it.qty} {it.name}
-                  </span>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <CallSheet orders={orders} typeOrder={pieTypes.map((p) => p.name)} tz={tz} />
 
       {/* BOX IT */}
       <section className="space-y-2">

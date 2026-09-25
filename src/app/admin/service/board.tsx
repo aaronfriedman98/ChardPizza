@@ -9,6 +9,7 @@ import { formatCents } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { OrderCard } from "@/components/admin/order-card";
 import { LiveRefresh } from "@/components/admin/live-refresh";
+import { CallSheet } from "@/components/admin/call-sheet";
 import { setOrderingOverride } from "@/app/admin/services/actions";
 
 type Filter = "all" | "active" | "pickup" | "delivery" | "unpaid" | "late" | "ready" | "done";
@@ -20,12 +21,14 @@ export function ServiceBoard({
   orders,
   settings,
   candidates,
+  typeOrder,
 }: {
   service: Service;
   availability: ServiceAvailability;
   orders: Order[];
   settings: Settings;
   candidates: Service[];
+  typeOrder: string[];
 }) {
   const router = useRouter();
   const tz = settings.time_zone;
@@ -176,6 +179,8 @@ export function ServiceBoard({
         </div>
       </div>
 
+      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+      <div className="space-y-4 min-w-0">
       {/* filters */}
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -220,6 +225,12 @@ export function ServiceBoard({
           </div>
         </section>
       ))}
+
+      </div>
+      <aside className="xl:sticky xl:top-4 xl:self-start">
+        <CallSheet orders={orders} typeOrder={typeOrder} tz={tz} compact />
+      </aside>
+      </div>
 
       {/* ready-too-long callout */}
       {active.some((o) => minutesReady(o, now) >= settings.ready_uncollected_minutes) && filter !== "ready" && (
