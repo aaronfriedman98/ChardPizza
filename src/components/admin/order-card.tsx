@@ -7,8 +7,9 @@ import { type Order, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgen
 import { formatCents, formatPhone } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { markPaid, markUnpaid, movePriority, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
+import { QuickSend } from "@/components/admin/quick-send";
 
-type Thresholds = Pick<Settings, "late_warning_minutes" | "late_critical_minutes" | "ready_uncollected_minutes">;
+type Thresholds = Settings;
 
 export function OrderCard({
   order: o,
@@ -152,6 +153,7 @@ export function OrderCard({
             </Btn>
           )}
           {!paid && <Btn onClick={() => run(() => markPaid(o.id))}>Mark paid</Btn>}
+          <QuickSend order={o} settings={thresholds} />
           {paid && mode === "board" && (
             <Btn onClick={() => confirm("Undo Mark Paid on this order?") && run(() => markUnpaid(o.id))}>Undo paid</Btn>
           )}

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
+import { sendOrderConfirmation } from "@/lib/email";
 
 const schema = z.object({
   service_id: z.string().uuid(),
@@ -79,6 +80,7 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
     return { error: message, code };
   }
 
-  const result = data as { order_number: string; token: string };
+  const result = data as { id: string; order_number: string; token: string };
+  await sendOrderConfirmation(result.id);
   redirect(`/order/${result.order_number}?t=${result.token}`);
 }

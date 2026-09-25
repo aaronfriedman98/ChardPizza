@@ -8,6 +8,7 @@ import { fmtDateTime, fmtTime } from "@/lib/time";
 import { OrderCard } from "@/components/admin/order-card";
 import { LiveRefresh } from "@/components/admin/live-refresh";
 import { NoteForm } from "./note-form";
+import { ResendButton } from "./resend-button";
 
 export const metadata = { title: "Order | Char'd Pizza" };
 
@@ -145,9 +146,12 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
           </section>
 
           <section className="card space-y-2">
-            <h2 className="font-bold">Messages sent</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold">Messages sent</h2>
+              <ResendButton orderId={o.id} email={o.customer_email} />
+            </div>
             <ul className="text-sm">
-              {(notifications ?? []).length === 0 && <li className="text-ink/50">Nothing sent yet. Notifications arrive in a later step.</li>}
+              {(notifications ?? []).length === 0 && <li className="text-ink/50">Nothing sent yet. Use the Message button on the card.</li>}
               {((notifications ?? []) as unknown as Notification[]).map((n) => (
                 <li key={n.id} className="flex justify-between py-1">
                   <span>

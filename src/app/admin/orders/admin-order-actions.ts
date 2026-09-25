@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
+import { sendOrderConfirmation } from "@/lib/email";
 
 export type Result = { error?: string; code?: string };
 
@@ -106,6 +107,7 @@ export async function createManualOrder(raw: CreateManualOrderInput): Promise<Re
     source: v.source,
     override: v.capacity_override,
   });
+  await sendOrderConfirmation(result.id);
   touch();
   redirect(`/admin/orders/${result.id}`);
 }
