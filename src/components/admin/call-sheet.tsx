@@ -23,7 +23,9 @@ export function CallSheet({ orders, tz, compact = false }: { orders: Order[]; tz
       <ol className="mt-2 space-y-1">
         {runs.map((r, i) => {
           const newSlot = i === 0 || runs[i - 1].slotStart !== r.slotStart;
-          const who = r.parts.map((p) => `${p.customer}${p.flags.length ? ` (${p.flags.join(", ")})` : ""}${r.parts.length > 1 ? ` ×${p.qty}` : ""}`).join(", ");
+          const who = r.parts
+            .map((p) => `${p.customer}${p.scheduledAt !== r.slotStart ? ` (${fmtTime(p.scheduledAt, tz)})` : ""}${p.flags.length ? ` ${p.flags.join("/")}` : ""}${r.parts.length > 1 ? ` ×${p.qty}` : ""}`)
+            .join(", ");
           return (
             <li key={`${r.slotStart}-${i}`}>
               {newSlot && <div className={`${i === 0 ? "" : "mt-2"} text-[11px] font-semibold uppercase tracking-wide text-white/50`}>{fmtTime(r.slotStart, tz)}</div>}

@@ -94,7 +94,7 @@ export function OrderCard({
               {paid ? "PAID" : PAY_LABEL[o.payment_status]} · {o.payment_method}
             </Badge>
             <Badge tone={o.status === "ready" ? "green" : o.status === "making" ? "ember" : "gray"}>{STATUS_LABEL[o.status]}</Badge>
-            {o.is_rush && <Badge tone="red">RUSH</Badge>}
+            {o.is_rush && <Badge tone="red">MAKE NOW</Badge>}
             {o.is_on_hold && <Badge tone="gray">ON HOLD</Badge>}
             {o.customer_arrived && !done && <Badge tone="blue">HERE</Badge>}
           </div>
@@ -161,7 +161,7 @@ export function OrderCard({
               {o.status !== "ready" && o.status !== "out_for_delivery" && (
                 <>
                   <Btn onClick={() => run(() => setFlag(o.id, "customer_arrived", !o.customer_arrived))}>{o.customer_arrived ? "Not here" : "Here"}</Btn>
-                  <Btn onClick={() => run(() => setFlag(o.id, "is_rush", !o.is_rush))}>{o.is_rush ? "Unrush" : "Rush"}</Btn>
+                  <Btn onClick={() => run(() => setFlag(o.id, "is_rush", !o.is_rush))}>{o.is_rush ? "Undo make now" : "Make now"}</Btn>
                   <Btn onClick={() => run(() => setFlag(o.id, "is_on_hold", !o.is_on_hold))}>{o.is_on_hold ? "Release" : "Hold"}</Btn>
                   <span className="inline-flex overflow-hidden rounded-lg bg-cream">
                     <button disabled={pending} onClick={() => run(() => movePriority(o.id, "up"))} className="px-2 py-2 text-sm hover:bg-line" aria-label="Move up">

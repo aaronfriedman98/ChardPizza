@@ -60,3 +60,22 @@ check("sides are not baked", show([mk(S1, [["Soup", 2]].map(([a, b]) => [a as st
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
+
+// --- priority across slots -------------------------------------------------
+{
+  const e = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
+  // A later-slot order pulled up (priority set below the 19:15 boundary) bakes with the 19:00 group.
+  const pulled = [mk(S1, [[R, 2]], { production_priority: e(S1) }), mk(S2, [[W, 1]], { production_priority: e(S1) + 1 }), mk(S2, [[R, 1]], { production_priority: e(S2) })];
+  const r1 = buildRuns(pulled);
+  const ok1 = r1[0].slotStart === S1 && r1[1].slotStart === S1 && r1[1].name === W && r1[2].slotStart === S2;
+  ok1 ? pass++ : fail++;
+  console.log(`${ok1 ? "PASS" : "FAIL"}  order moved into the earlier slot bakes there (booked time kept: ${r1[1].parts[0].scheduledAt === S2})`);
+  // Make now from a later slot goes to the very top.
+  const now = [mk(S1, [[R, 2]], { production_priority: e(S1) }), mk(S2, [[W, 1]], { production_priority: e(S2), is_rush: true })];
+  const r2 = buildRuns(now);
+  const ok2 = r2[0].name === W && r2[0].slotStart === S1 && r2[0].parts[0].flags.includes("NOW");
+  ok2 ? pass++ : fail++;
+  console.log(`${ok2 ? "PASS" : "FAIL"}  make-now order from a later slot bakes first`);
+}
+console.log(`\n${pass} passed, ${fail} failed (with priority cases)`);
+process.exit(fail ? 1 : 0);

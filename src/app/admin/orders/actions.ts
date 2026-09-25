@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
-import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/lib/orders";
+import { queueSort, type Order, type OrderStatus, type PaymentMethod, type PaymentStatus } from "@/lib/orders";
 
 export type Result = { error?: string; ok?: string };
 
@@ -132,9 +132,8 @@ export async function movePriority(orderId: string, direction: "up" | "down"): P
     .select("id, production_priority, is_rush, is_on_hold, customer_arrived, created_at")
     .eq("service_id", o.service_id)
     .in("status", ["confirmed", "making"])
-    .order("production_priority")
-    .order("created_at");
-  const list = rows ?? [];
+    .eq("is_on_hold", false);
+  const list = ((rows ?? []) as unknown as Order[]).sort(queueSort);
   const idx = list.findIndex((r) => r.id === orderId);
   const swapIdx = direction === "up" ? idx - 1 : idx + 1;
   if (idx < 0 || swapIdx < 0 || swapIdx >= list.length) return { ok: "" };

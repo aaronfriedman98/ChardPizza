@@ -94,7 +94,7 @@ export function KitchenView({
               <article key={o.id} className={`rounded-2xl border-2 bg-white p-4 ${o.is_rush ? "border-red-400" : o.customer_arrived ? "border-blue-400" : behind > 0 ? "border-amber-400" : "border-line"}`}>
                 <div className="text-xs font-semibold uppercase tracking-wide text-ink/50">
                   #{i + 1} · {fmtTime(o.scheduled_at, tz)} · {o.order_number}
-                  {o.is_rush && <span className="ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[10px] text-white">RUSH</span>}
+                  {o.is_rush && <span className="ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[10px] text-white">MAKE NOW</span>}
                   {o.customer_arrived && <span className="ml-2 rounded bg-blue-600 px-1.5 py-0.5 text-[10px] text-white">HERE</span>}
                   {behind > 0 && <span className="ml-2 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] text-white">{behind} MIN LATE</span>}
                 </div>

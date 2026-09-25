@@ -7,7 +7,7 @@ export type Run = {
   name: string;
   qty: number;
   /** Which orders these pies belong to. */
-  parts: { orderId: string; customer: string; qty: number; flags: string[] }[];
+  parts: { orderId: string; customer: string; qty: number; flags: string[]; scheduledAt: string }[];
   /** Orders that are fully baked once this run is done. */
   completes: string[];
 };
@@ -71,15 +71,29 @@ function sequenceSlot(orders: Order[]): Piece[] {
  */
 export function buildRuns(orders: Order[]): Run[] {
   const open = orders.filter((o) => (o.status === "confirmed" || o.status === "making") && !o.is_on_hold && linesOf(o).length > 0).sort(queueSort);
+  // An order bakes in the slot its production priority points at. Priority defaults to the
+  // booked slot; the up/down arrows can carry it into an earlier slot, and "make now" (rush)
+  // puts it in the first slot on the list. The booked time itself never changes.
+  const slotStarts = Array.from(new Set(open.map((o) => o.scheduled_at))).sort();
+  const epochs = slotStarts.map((t) => Math.floor(new Date(t).getTime() / 1000));
+  const bucketOf = (o: Order) => {
+    if (o.is_rush) return slotStarts[0];
+    let b = o.scheduled_at;
+    for (let i = 0; i < slotStarts.length; i++) if (epochs[i] <= o.production_priority) b = slotStarts[i];
+    return b;
+  };
   const bySlot = new Map<string, Order[]>();
-  for (const o of open) bySlot.set(o.scheduled_at, [...(bySlot.get(o.scheduled_at) ?? []), o]);
+  for (const o of open) {
+    const k = bucketOf(o);
+    bySlot.set(k, [...(bySlot.get(k) ?? []), o]);
+  }
 
   const out: Run[] = [];
   for (const [slotStart, list] of Array.from(bySlot.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
     const seq = sequenceSlot(list);
     const remaining = list.map((o) => linesOf(o).reduce((a, l) => a + l.qty, 0));
     const first = (o: Order) => o.customer_name.split(/\s+/)[0] ?? o.customer_name;
-    const flags = (o: Order) => [o.is_rush && "RUSH", o.customer_arrived && "HERE"].filter(Boolean) as string[];
+    const flags = (o: Order) => [o.is_rush && "NOW", o.customer_arrived && "HERE"].filter(Boolean) as string[];
 
     let current: Run | null = null;
     for (const p of seq) {
@@ -89,7 +103,7 @@ export function buildRuns(orders: Order[]): Run[] {
         out.push(current);
       }
       current.qty += p.qty;
-      current.parts.push({ orderId: o.id, customer: first(o), qty: p.qty, flags: flags(o) });
+      current.parts.push({ orderId: o.id, customer: first(o), qty: p.qty, flags: flags(o), scheduledAt: o.scheduled_at });
       remaining[p.order] -= p.qty;
       if (remaining[p.order] === 0) current.completes.push(first(o));
     }
