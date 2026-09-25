@@ -1,5 +1,5 @@
-// Checks the oven batching rule against Aaron's examples. Run: npx tsx scripts/test-batches.ts
-import { buildBatches } from "../src/lib/batches";
+// Checks the oven sequencing rule against Aaron's examples. Run: npx tsx scripts/test-batches.ts
+import { buildRuns } from "../src/lib/batches";
 import type { Order } from "../src/lib/orders";
 
 let n = 0;
@@ -7,7 +7,7 @@ const mk = (slot: string, items: [string, number][], flags: Partial<Order> = {})
   ({
     id: `o${++n}`,
     order_number: `CHAR-${1000 + n}`,
-    customer_name: `Person ${n}`,
+    customer_name: `P${n}`,
     scheduled_at: slot,
     status: "confirmed",
     production_priority: n,
@@ -19,10 +19,11 @@ const mk = (slot: string, items: [string, number][], flags: Partial<Order> = {})
     ...flags,
   }) as unknown as Order;
 
-const TYPES = ["Char'd Pie", "Pizza Bianca"];
+const R = "Reg";
+const W = "White";
 const S1 = "2026-01-01T19:00:00Z";
 const S2 = "2026-01-01T19:15:00Z";
-const show = (b: ReturnType<typeof buildBatches>) => b.map((x) => x.lines.map((l) => `${l.qty} ${l.name.split(" ")[0]}`).join(" + ")).join("  |  ");
+const show = (orders: Order[]) => buildRuns(orders).map((r) => `${r.qty} ${r.name}`).join(", ");
 
 let pass = 0, fail = 0;
 function check(name: string, got: string, want: string) {
@@ -31,29 +32,31 @@ function check(name: string, got: string, want: string) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}\n      got:  ${got}\n      want: ${want}`);
 }
 
-// Example 1: (2 reg + 1 white) then (1 reg + 1 white) must stay separate.
-check("mixed orders stay separate", show(buildBatches([mk(S1, [["Char'd Pie", 2], ["Pizza Bianca", 1]]), mk(S1, [["Char'd Pie", 1], ["Pizza Bianca", 1]])], TYPES)),
-  "2 Char'd + 1 Pizza  |  1 Char'd + 1 Pizza");
+// Example 1: (2 reg + 1 white) then (1 reg + 1 white) -> 2 reg, 2 white, 1 reg.
+check("whites batch, nobody delayed", show([mk(S1, [[R, 2], [W, 1]]), mk(S1, [[R, 1], [W, 1]])]), "2 Reg, 2 White, 1 Reg");
 
-// Example 2: (2 reg), (2 reg), (2 reg + 1 white) merge into 6 reg + 1 white.
-check("same-type orders merge with a trailing mixed order", show(buildBatches([mk(S1, [["Char'd Pie", 2]]), mk(S1, [["Char'd Pie", 2]]), mk(S1, [["Char'd Pie", 2], ["Pizza Bianca", 1]])], TYPES)),
-  "6 Char'd + 1 Pizza");
+// Example 2: (2 reg), (2 reg), (2 reg + 1 white) -> 6 reg, 1 white.
+check("single-type orders merge", show([mk(S1, [[R, 2]]), mk(S1, [[R, 2]]), mk(S1, [[R, 2], [W, 1]])]), "6 Reg, 1 White");
 
-// Mixed order first, then a single-type order of the FIRST type: merging would delay the first person.
-check("mixed then single reg stays separate", show(buildBatches([mk(S1, [["Char'd Pie", 2], ["Pizza Bianca", 1]]), mk(S1, [["Char'd Pie", 2]])], TYPES)),
-  "2 Char'd + 1 Pizza  |  2 Char'd");
+// Mixed first, then a single reg: pulling the reg forward would delay the first person.
+check("later reg does not jump a waiting white", show([mk(S1, [[R, 2], [W, 1]]), mk(S1, [[R, 2]])]), "2 Reg, 1 White, 2 Reg");
 
-// Batches never cross slots.
-check("slots are not merged", show(buildBatches([mk(S1, [["Char'd Pie", 2]]), mk(S2, [["Char'd Pie", 2]])], TYPES)),
-  "2 Char'd  |  2 Char'd");
+// Slots stay separate even when the type matches.
+check("slots are not merged", show([mk(S1, [[R, 2]]), mk(S2, [[R, 2]])]), "2 Reg, 2 Reg");
 
-// Rush goes first within the slot.
-const rushList = [mk(S1, [["Pizza Bianca", 1]]), mk(S1, [["Char'd Pie", 1]], { is_rush: true })];
-check("rush first", buildBatches(rushList, TYPES)[0].orders[0].flags.join(), "RUSH");
+// Rush goes first within a slot.
+check("rush first", buildRuns([mk(S1, [[W, 1]]), mk(S1, [[R, 1]], { is_rush: true })])[0].name, R);
 
-// Two whites then two regs: pure single-type orders of different types can merge (nobody waits longer).
-check("different single types merge when fair, in queue order", show(buildBatches([mk(S1, [["Pizza Bianca", 2]]), mk(S1, [["Char'd Pie", 2]])], TYPES)),
-  "2 Pizza + 2 Char'd");
+// White then reg, both single-type: nothing to batch, keep queue order.
+check("different single types keep queue order", show([mk(S1, [[W, 2]]), mk(S1, [[R, 2]])]), "2 White, 2 Reg");
+
+// Completion markers: in example 1, P1 is done after the white run, P2 after the last reg.
+const runs = buildRuns([mk(S1, [[R, 2], [W, 1]]), mk(S1, [[R, 1], [W, 1]])]);
+const [a, b] = runs.flatMap((r) => r.completes);
+check("completion markers", runs.map((r) => r.completes.join("+") || "-").join(" | "), `- | ${a} | ${b}`);
+
+// Sides-only orders never appear.
+check("sides are not baked", show([mk(S1, [["Soup", 2]].map(([a, b]) => [a as string, b as number]) as [string, number][])].map((o) => ({ ...o, order_items: o.order_items.map((it) => ({ ...it, capacity_units_each: 0 })) })) as Order[]), "");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

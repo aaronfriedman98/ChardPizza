@@ -21,14 +21,12 @@ export function ServiceBoard({
   orders,
   settings,
   candidates,
-  typeOrder,
 }: {
   service: Service;
   availability: ServiceAvailability;
   orders: Order[];
   settings: Settings;
   candidates: Service[];
-  typeOrder: string[];
 }) {
   const router = useRouter();
   const tz = settings.time_zone;
@@ -228,7 +226,7 @@ export function ServiceBoard({
 
       </div>
       <aside className="xl:sticky xl:top-4 xl:self-start">
-        <CallSheet orders={orders} typeOrder={typeOrder} tz={tz} compact />
+        <CallSheet orders={orders} tz={tz} compact />
       </aside>
       </div>
 

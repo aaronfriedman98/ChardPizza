@@ -82,7 +82,7 @@ export function KitchenView({
       </div>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" onClick={() => setError(null)}>{error}</p>}
 
-      <CallSheet orders={orders} typeOrder={pieTypes.map((p) => p.name)} tz={tz} />
+      <CallSheet orders={orders} tz={tz} />
 
       {/* BOX IT */}
       <section className="space-y-2">

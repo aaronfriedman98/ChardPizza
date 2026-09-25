@@ -1,89 +1,102 @@
 import type { Order } from "@/lib/orders";
 import { queueSort } from "@/lib/orders";
 
-export type Batch = {
+/** One step for the oven: make `qty` of `name`. */
+export type Run = {
   slotStart: string;
-  lines: { name: string; qty: number }[];
-  orders: { id: string; name: string; number: string; flags: string[] }[];
+  name: string;
+  qty: number;
+  /** Which orders these pies belong to. */
+  parts: { orderId: string; customer: string; qty: number; flags: string[] }[];
+  /** Orders that are fully baked once this run is done. */
+  completes: string[];
 };
 
 type Line = { name: string; qty: number };
 
 function linesOf(o: Order): Line[] {
-  // Only pies count. Sides (capacity 0) are boxed, not baked in sequence.
+  // Only pies count. Sides (capacity 0) are boxed, not baked.
   const m = new Map<string, number>();
   for (const it of o.order_items) if (Number(it.capacity_units_each) > 0) m.set(it.item_name, (m.get(it.item_name) ?? 0) + it.quantity);
   return Array.from(m, ([name, qty]) => ({ name, qty }));
 }
 
-/**
- * Would making these orders type-by-type (all of type 1, then all of type 2 ...)
- * finish any order later than making them one after another? If so, they must not share a batch.
- */
-function mergeIsFair(orders: Line[][]): boolean {
-  // Sequential: each order's pies in order; completion = running total.
-  const seq: number[] = [];
+type Piece = { type: string; qty: number; order: number };
+
+/** Position at which each order's last pie comes out, given a sequence of pieces. */
+function completions(seq: Piece[], orderCount: number): number[] {
+  const done = new Array<number>(orderCount).fill(0);
   let pos = 0;
-  for (const lines of orders) {
-    pos += lines.reduce((a, l) => a + l.qty, 0);
-    seq.push(pos);
+  for (const p of seq) {
+    pos += p.qty;
+    done[p.order] = pos;
   }
-  // Grouped: for each type in menu order, each order's pies of that type, orders in queue order.
-  const done = orders.map(() => 0);
-  pos = 0;
-  const types = Array.from(new Set(orders.flatMap((ls) => ls.map((l) => l.name))));
-  for (const t of types) {
-    orders.forEach((lines, i) => {
-      const l = lines.find((x) => x.name === t);
-      if (!l) return;
-      pos += l.qty;
-      done[i] = pos;
-    });
-  }
-  return done.every((d, i) => d <= seq[i]);
+  return done;
 }
 
 /**
- * Turns the open queue into the sequence the oven should follow.
- * Batches never cross a time slot. Within a slot, orders are in queue order
- * (rush and "here" first) and merged only while the merge delays nobody.
- * Pie types inside a batch are listed in the order they first appear in the queue;
- * bake them in that order and every order finishes no later than one-at-a-time.
+ * The rule: start from "one order at a time". Then, for each pie run, try to pull it
+ * earlier to sit right after the most recent run of the same type. Keep the move only
+ * if no order finishes later than it would have one-at-a-time.
+ *
+ * (2 reg + 1 white) then (1 reg + 1 white) becomes 2 reg, 2 white, 1 reg: the whites
+ * batch, and both customers still finish at pie 3 and pie 5.
  */
-export function buildBatches(orders: Order[], typeOrder: string[]): Batch[] {
-  const open = orders.filter((o) => (o.status === "confirmed" || o.status === "making") && !o.is_on_hold).sort(queueSort);
+function sequenceSlot(orders: Order[]): Piece[] {
+  const lines = orders.map(linesOf);
+  const naive: Piece[] = [];
+  lines.forEach((ls, i) => ls.forEach((l) => naive.push({ type: l.name, qty: l.qty, order: i })));
+  const target = completions(naive, orders.length);
+
+  const seq: Piece[] = [];
+  for (const piece of naive) {
+    let lastSame = -1;
+    for (let k = seq.length - 1; k >= 0; k--) if (seq[k].type === piece.type) { lastSame = k; break; }
+    if (lastSame >= 0 && lastSame < seq.length - 1) {
+      const trial = [...seq.slice(0, lastSame + 1), piece, ...seq.slice(lastSame + 1)];
+      const done = completions(trial, orders.length);
+      if (done.every((d, i) => d <= target[i])) {
+        seq.splice(lastSame + 1, 0, piece);
+        continue;
+      }
+    }
+    seq.push(piece);
+  }
+  return seq;
+}
+
+/**
+ * Turns the open queue into the exact sequence the oven should follow.
+ * Slots are never mixed. Within a slot, orders are in queue order (rush and "here" first).
+ */
+export function buildRuns(orders: Order[]): Run[] {
+  const open = orders.filter((o) => (o.status === "confirmed" || o.status === "making") && !o.is_on_hold && linesOf(o).length > 0).sort(queueSort);
   const bySlot = new Map<string, Order[]>();
   for (const o of open) bySlot.set(o.scheduled_at, [...(bySlot.get(o.scheduled_at) ?? []), o]);
 
-  void typeOrder; // reserved: the bake order inside a batch follows the queue, see mergeIsFair
-  const out: Batch[] = [];
-
+  const out: Run[] = [];
   for (const [slotStart, list] of Array.from(bySlot.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
-    let current: Order[] = [];
-    const flush = () => {
-      if (!current.length) return;
-      // Map keeps first-appearance order, which is the bake order the fairness check assumed.
-      const totals = new Map<string, number>();
-      for (const o of current) for (const l of linesOf(o)) totals.set(l.name, (totals.get(l.name) ?? 0) + l.qty);
-      out.push({
-        slotStart,
-        lines: Array.from(totals, ([name, qty]) => ({ name, qty })),
-        orders: current.map((o) => ({
-          id: o.id,
-          name: o.customer_name.split(/\s+/)[0] ?? o.customer_name,
-          number: o.order_number,
-          flags: [o.is_rush && "RUSH", o.customer_arrived && "HERE"].filter(Boolean) as string[],
-        })),
-      });
-      current = [];
-    };
-    for (const o of list) {
-      if (linesOf(o).length === 0) continue; // sides only: nothing to bake
-      const candidate = [...current, o];
-      if (current.length && !mergeIsFair(candidate.map(linesOf))) flush();
-      current.push(o);
+    const seq = sequenceSlot(list);
+    const remaining = list.map((o) => linesOf(o).reduce((a, l) => a + l.qty, 0));
+    const first = (o: Order) => o.customer_name.split(/\s+/)[0] ?? o.customer_name;
+    const flags = (o: Order) => [o.is_rush && "RUSH", o.customer_arrived && "HERE"].filter(Boolean) as string[];
+
+    let current: Run | null = null;
+    for (const p of seq) {
+      const o = list[p.order];
+      if (!current || current.name !== p.type) {
+        current = { slotStart, name: p.type, qty: 0, parts: [], completes: [] };
+        out.push(current);
+      }
+      current.qty += p.qty;
+      current.parts.push({ orderId: o.id, customer: first(o), qty: p.qty, flags: flags(o) });
+      remaining[p.order] -= p.qty;
+      if (remaining[p.order] === 0) current.completes.push(first(o));
     }
-    flush();
   }
   return out;
 }
+
+/** @deprecated kept for older imports; use buildRuns. */
+export const buildBatches = (orders: Order[]) =>
+  buildRuns(orders).map((r) => ({ slotStart: r.slotStart, lines: [{ name: r.name, qty: r.qty }], orders: r.parts.map((p) => ({ id: p.orderId, name: p.customer, number: "", flags: p.flags })) }));
