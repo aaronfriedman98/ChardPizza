@@ -46,21 +46,8 @@ create table admin_users (
 );
 create trigger admin_users_updated before update on admin_users for each row execute function set_updated_at();
 
--- Every auth user gets an admin profile. Public sign-up is disabled in the
--- Supabase dashboard, so only users we create by hand ever land here.
-create or replace function handle_new_auth_user()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  insert into admin_users (id, display_name, email)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1)),
-    new.email
-  )
-  on conflict (id) do nothing;
-  return new;
-end $$;
-create trigger on_auth_user_created after insert on auth.users for each row execute function handle_new_auth_user();
+-- Admin profiles are created deliberately by scripts/create-admin.mjs, never
+-- automatically from auth sign-ups. Public sign-up is also disabled in the dashboard.
 
 create or replace function is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
