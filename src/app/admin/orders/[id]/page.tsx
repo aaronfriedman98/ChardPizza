@@ -58,7 +58,14 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
             · placed {fmtDateTime(o.created_at, tz)} · from {o.source}
           </div>
         </div>
-        <LiveRefresh serviceId={o.service_id} intervalMs={30000} />
+        <div className="flex items-center gap-2">
+          {o.status !== "completed" && o.status !== "cancelled" && (
+            <Link href={`/admin/orders/${o.id}/edit`} className="btn-ghost border border-line text-sm">
+              Edit order
+            </Link>
+          )}
+          <LiveRefresh serviceId={o.service_id} intervalMs={30000} />
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">

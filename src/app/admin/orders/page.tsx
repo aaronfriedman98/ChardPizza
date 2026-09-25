@@ -36,7 +36,10 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/ord
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">Orders</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="page-title">Orders</h1>
+        <Link href="/admin/orders/new" className="btn-primary">+ New order</Link>
+      </div>
       <form className="flex flex-wrap items-center gap-2">
         <input name="q" defaultValue={q} placeholder="Search name, phone, order #" className="input w-full sm:w-72" />
         <input type="hidden" name="f" value={f} />
