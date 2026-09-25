@@ -58,8 +58,6 @@ check("completion markers", runs.map((r) => r.completes.join("+") || "-").join("
 // Sides-only orders never appear.
 check("sides are not baked", show([mk(S1, [["Soup", 2]].map(([a, b]) => [a as string, b as number]) as [string, number][])].map((o) => ({ ...o, order_items: o.order_items.map((it) => ({ ...it, capacity_units_each: 0 })) })) as Order[]), "");
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
 
 // --- priority across slots -------------------------------------------------
 {
