@@ -55,8 +55,8 @@ export async function saveExpense(input: unknown): Promise<Result> {
   } else {
     const { data, error } = await supabase.from("expenses").insert({ ...row, created_by: admin.id }).select("id").single();
     if (error) return { error: error.message };
-    id = data.id;
-    await audit(supabase, admin.id, "expense.created", "expense", id, row);
+    id = data.id as string;
+    await audit(supabase, admin.id, "expense.created", "expense", data.id as string, row);
   }
   revalidatePath("/admin/expenses");
   revalidatePath("/admin/reports");
