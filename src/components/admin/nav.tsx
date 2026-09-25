@@ -14,6 +14,7 @@ export const NAV = [
   { href: "/admin/menu", label: "Menu", icon: "◉" },
   { href: "/admin/customers", label: "Customers", icon: "☺" },
   { href: "/admin/expenses", label: "Expenses", icon: "$" },
+  { href: "/admin/account", label: "Account", icon: "🏦" },
   { href: "/admin/reports", label: "Reports", icon: "▥" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];

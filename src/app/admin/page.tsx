@@ -12,7 +12,8 @@ export const metadata = { title: "Dashboard | Char'd Pizza" };
 
 export default async function DashboardPage() {
   const { supabase, admin } = await requireAdmin();
-  const { settings, service, availability } = await pickOpsService(supabase);
+  const [{ settings, service, availability }, { data: ledger }] = await Promise.all([pickOpsService(supabase), supabase.from("account_transactions").select("amount_cents")]);
+  const balance = (ledger ?? []).reduce((a, r) => a + r.amount_cents, 0);
   const tz = settings.time_zone;
   const now = new Date();
 
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
         <h1 className="page-title">Hi {admin.display_name}</h1>
         <div className="card space-y-3">
           <p className="text-ink/70">No sale is published right now.</p>
+          <p className="text-sm text-ink/60">Char&rsquo;d account balance: <b className="text-ink">{formatCents(balance)}</b></p>
           <div className="flex flex-wrap gap-2">
             <Link href="/admin/services/new" className="btn-primary">+ New service</Link>
             <Link href="/admin/services" className="btn-ghost border border-line">All services</Link>
@@ -79,6 +81,10 @@ export default async function DashboardPage() {
         <Jump href="/admin/handoff" title="Handoff" sub="Name, paid, hand it over" />
         <Jump href={`/admin/services/${service.id}/share`} title="Share" sub="WhatsApp message and flyer" />
       </div>
+      <Link href="/admin/account" className="card block text-sm hover:border-ember/60">
+        <span className="text-ink/60">Char&rsquo;d account balance </span>
+        <b className="text-lg">{formatCents(balance)}</b>
+      </Link>
 
       {state === "upcoming" && service.ordering_opens_at && (
         <div className="card text-sm text-ink/70">Ordering opens {fmtDateTime(service.ordering_opens_at, tz)}.</div>

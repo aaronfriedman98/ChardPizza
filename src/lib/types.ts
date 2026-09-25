@@ -183,3 +183,16 @@ export interface ServiceWaste {
   created_by: string | null;
   created_at: string;
 }
+
+export interface AccountTransaction {
+  id: string;
+  txn_date: string;
+  amount_cents: number;
+  kind: "opening_balance" | "deposit" | "expense" | "reimbursement" | "partner_draw" | "adjustment" | "other";
+  description: string | null;
+  expense_id: string | null;
+  partner_id: string | null;
+  service_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}

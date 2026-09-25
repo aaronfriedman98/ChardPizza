@@ -15,13 +15,15 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
   const tab: Tab = TABS.includes(sp.tab as Tab) ? (sp.tab as Tab) : "overview";
   const { supabase } = await requireAdmin();
 
-  const [{ data: settingsRow }, { data: serviceRows }, { data: expenseRows }, { data: catRows }, { data: partnerRows }] = await Promise.all([
+  const [{ data: settingsRow }, { data: serviceRows }, { data: expenseRows }, { data: catRows }, { data: partnerRows }, { data: drawRows }] = await Promise.all([
     supabase.from("settings").select("*").eq("id", true).single(),
     supabase.from("services").select("*").in("status", ["scheduled", "live", "completed", "archived"]).order("service_date", { ascending: false }).limit(60),
     supabase.from("expenses").select("*").is("deleted_at", null).order("expense_date", { ascending: false }),
     supabase.from("expense_categories").select("*").order("sort_order"),
     supabase.from("admin_users").select("id, display_name").eq("is_partner", true).eq("is_active", true).order("created_at"),
+    supabase.from("account_transactions").select("partner_id, amount_cents").eq("kind", "partner_draw"),
   ]);
+  const draws = (drawRows ?? []) as { partner_id: string | null; amount_cents: number }[];
   const settings = settingsRow as Settings;
   const tz = settings.time_zone;
   const services = (serviceRows ?? []) as Service[];
@@ -51,7 +53,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/admin/re
 
       {tab === "overview" && services.length > 0 && <Overview services={services} expenses={expenses} supabase={supabase} tz={tz} />}
       {tab === "service" && selected && <ServiceTab services={services} selected={selected} expenses={expenses} categories={categories} partners={partners} supabase={supabase} tz={tz} />}
-      {tab === "partners" && <PartnersTab expenses={expenses} partners={partners} categories={categories} services={services} supabase={supabase} />}
+      {tab === "partners" && <PartnersTab expenses={expenses} partners={partners} categories={categories} services={services} supabase={supabase} draws={draws} />}
       {tab === "customers" && <CustomersTab supabase={supabase} tz={tz} />}
     </div>
   );
@@ -255,12 +257,14 @@ async function PartnersTab({
   categories,
   services,
   supabase,
+  draws,
 }: {
   expenses: Expense[];
   partners: Pick<AdminUser, "id" | "display_name">[];
   categories: ExpenseCategory[];
   services: Service[];
   supabase: DB;
+  draws: { partner_id: string | null; amount_cents: number }[];
 }) {
   const ledger = partnerLedger(expenses, partners);
   const reports = await Promise.all(services.filter((s) => s.status === "completed" || s.status === "archived").slice(0, 24).map((s) => serviceReport(supabase, s)));
@@ -278,6 +282,7 @@ async function PartnersTab({
             <Line label="Of which reimbursable" cents={l.reimbursable} />
             <Line label="Already reimbursed" cents={l.reimbursed} />
             <Line label="Business still owes" cents={l.owed} bold tone={l.owed > 0 ? "amber" : undefined} />
+            <Line label="Draws taken from the account" cents={draws.filter((d) => d.partner_id === l.admin.id).reduce((a, d) => a - d.amount_cents, 0)} />
           </section>
         ))}
         {ledger.length === 0 && <div className="card text-ink/60">No partners marked yet. Partners are admin users with the partner flag.</div>}
