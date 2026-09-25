@@ -8,6 +8,7 @@ export const NAV = [
   { href: "/admin/service", label: "Service Board", icon: "▦" },
   { href: "/admin/kitchen", label: "Kitchen", icon: "♨" },
   { href: "/admin/handoff", label: "Handoff", icon: "✋" },
+  { href: "/admin/delivery", label: "Delivery", icon: "➜" },
   { href: "/admin/orders", label: "Orders", icon: "☰" },
   { href: "/admin/services", label: "Services", icon: "▤" },
   { href: "/admin/menu", label: "Menu", icon: "◉" },

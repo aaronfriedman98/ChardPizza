@@ -4,16 +4,16 @@ import { pickOpsService } from "@/lib/ops";
 import { loadServiceOrders } from "@/lib/orders";
 import { OpsList } from "@/components/admin/ops-list";
 
-export const metadata = { title: "Handoff | Char'd Pizza" };
+export const metadata = { title: "Delivery | Char'd Pizza" };
 
-export default async function HandoffPage({ searchParams }: PageProps<"/admin/handoff">) {
+export default async function DeliveryPage({ searchParams }: PageProps<"/admin/delivery">) {
   const { service: sid } = await searchParams;
   const { supabase } = await requireAdmin();
   const { settings, service } = await pickOpsService(supabase, typeof sid === "string" ? sid : undefined);
   if (!service) {
     return (
       <div className="space-y-4">
-        <h1 className="page-title">Handoff</h1>
+        <h1 className="page-title">Delivery</h1>
         <div className="card text-ink/70">
           No published service. <Link href="/admin/services" className="text-ember hover:underline">Services</Link>
         </div>
@@ -23,15 +23,16 @@ export default async function HandoffPage({ searchParams }: PageProps<"/admin/ha
   const orders = await loadServiceOrders(supabase, service.id);
   return (
     <OpsList
-      title="Handoff"
+      title="Delivery"
       service={service}
       settings={settings}
-      orders={orders.filter((o) => o.fulfillment === "pickup")}
-      mode="handoff"
+      orders={orders.filter((o) => o.fulfillment === "delivery")}
+      mode="delivery"
       sections={[
-        { key: "ready", label: "Ready to hand out", match: (o) => o.status === "ready" },
+        { key: "out", label: "Out for delivery", match: (o) => o.status === "out_for_delivery" },
+        { key: "ready", label: "Ready to go", match: (o) => o.status === "ready" },
         { key: "soon", label: "Coming up", match: (o) => o.status === "making" || o.status === "confirmed" },
-        { key: "done", label: "Picked up", match: (o) => o.status === "completed", collapsed: true },
+        { key: "done", label: "Delivered", match: (o) => o.status === "completed", collapsed: true },
       ]}
     />
   );
