@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* Brand tokens. Char = near-black crust, ember = orange heat, cream = flour. */
+:root {
+  --char: #1b1614;
+  --ember: #e4572e;
+  --cream: #f7f1e8;
+  --ink: #2a2321;
+  --line: #e8e0d4;
+}
+
+@theme inline {
+  --color-char: var(--char);
+  --color-ember: var(--ember);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-line: var(--line);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@layer components {
+  .card { @apply rounded-2xl bg-white border border-line p-5 shadow-sm; }
+  .page-title { @apply text-2xl font-bold tracking-tight; }
+  .label { @apply block text-xs font-semibold uppercase tracking-wide text-ink/60 mb-1; }
+  .input { @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-base outline-none focus:border-ember focus:ring-2 focus:ring-ember/20; }
+  .btn-primary { @apply inline-flex items-center justify-center rounded-xl bg-ember px-4 py-2.5 font-semibold text-white transition hover:bg-ember/90 disabled:opacity-60; }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-xl px-3 py-2 font-medium text-ink/70 transition hover:bg-cream hover:text-ink; }
+}
