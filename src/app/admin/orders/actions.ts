@@ -12,7 +12,7 @@ const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
   pending_payment: ["confirmed", "cancelled"],
   confirmed: ["making", "ready", "cancelled"],
   making: ["ready", "confirmed", "cancelled"],
-  ready: ["completed", "out_for_delivery", "making", "cancelled"],
+  ready: ["completed", "out_for_delivery", "making", "confirmed", "cancelled"],
   out_for_delivery: ["completed", "ready"],
   completed: ["ready"],
   cancelled: ["confirmed"],
@@ -42,7 +42,7 @@ export async function setOrderStatus(orderId: string, next: OrderStatus, note?: 
   if (next === "cancelled") patch.cancel_reason = note ?? null;
   // Un-completing clears the completion stamp so timers make sense again.
   if (o.status === "completed" && next === "ready") patch.completed_at = null;
-  if (o.status === "ready" && next === "making") patch.ready_at = null;
+  if (o.status === "ready" && (next === "making" || next === "confirmed")) patch.ready_at = null;
 
   const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   if (error) return { error: error.message };

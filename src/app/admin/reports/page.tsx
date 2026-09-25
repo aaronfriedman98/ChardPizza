@@ -182,6 +182,7 @@ async function ServiceTab({
           <div className="grid grid-cols-2 gap-2 text-sm">
             <Mini label="Orders" value={String(r.liveOrders.length)} sub={`${r.pickupCount} pickup · ${r.deliveryCount} delivery`} />
             <Mini label="Pizza units" value={`${r.unitsSold} / ${selected.pizza_capacity_total}`} sub={r.soldOutAt ? `sold out ${fmtDateTime(r.soldOutAt, tz)}` : "did not sell out"} />
+            <Mini label="Pies lost" value={String(r.wastedUnits)} sub={r.waste.length ? r.waste.map((w) => `${w.qty} ${w.name} ${w.reason}`).join(", ") : "none logged"} />
             <Mini label="Avg order" value={formatCents(r.avgOrder)} sub={`${r.avgUnitsPerOrder} pizzas per order`} />
             <Mini label="Preorders vs live" value={`${r.preorderCount} / ${r.liveCount}`} sub="placed before vs during service" />
             <Mini label="Customers" value={`${r.newCustomers} new · ${r.returningCustomers} back`} />

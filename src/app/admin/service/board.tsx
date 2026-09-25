@@ -161,7 +161,7 @@ export function ServiceBoard({
 
       {/* metrics */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Stat label="Pizza units" value={`${Number(availability.units_sold)} / ${s.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} left`} />
+        <Stat label="Dough used" value={`${Number(availability.units_sold) + Number(availability.units_wasted)} / ${s.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} left${Number(availability.units_wasted) ? ` · ${Number(availability.units_wasted)} lost` : ""}`} />
         <Stat label="Orders" value={String(live.length)} sub={`${live.filter((o) => o.fulfillment === "pickup").length} pickup · ${live.filter((o) => o.fulfillment === "delivery").length} delivery`} />
         <Stat label="Revenue" value={formatCents(revenue)} sub={`${formatCents(paidTotal)} paid`} />
         <Stat label="Outstanding" value={formatCents(revenue - paidTotal)} sub={`${live.filter((o) => o.payment_status !== "paid").length} unpaid`} tone={revenue - paidTotal > 0 ? "amber" : "green"} />

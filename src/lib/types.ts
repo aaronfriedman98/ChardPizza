@@ -141,6 +141,7 @@ export interface ServiceAvailability {
   service_id: string;
   pizza_capacity_total: number;
   units_sold: number;
+  units_wasted: number;
   units_remaining: number;
   order_count: number;
 }
@@ -169,4 +170,16 @@ export interface Expense {
   created_by: string | null;
   created_at: string;
   deleted_at: string | null;
+}
+
+export interface ServiceWaste {
+  id: string;
+  service_id: string;
+  menu_item_id: string | null;
+  item_name: string;
+  units: number;
+  reason: "burnt" | "dropped" | "eaten" | "given_away" | "other";
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
 }

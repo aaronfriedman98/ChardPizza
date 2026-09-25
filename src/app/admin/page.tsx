@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile label="Pizza units sold" value={`${Number(availability.units_sold)} / ${service.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} remaining`} />
+        <Tile label="Dough used" value={`${Number(availability.units_sold) + Number(availability.units_wasted)} / ${service.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} remaining${Number(availability.units_wasted) ? ` · ${Number(availability.units_wasted)} lost` : ""}`} />
         <Tile label="Orders" value={String(live.length)} sub={`${live.filter((o) => o.fulfillment === "delivery").length} delivery`} />
         <Tile label="Revenue" value={formatCents(revenue)} sub={`${formatCents(paid)} collected`} />
         <Tile label="Outstanding" value={formatCents(revenue - paid)} sub={late ? `${late} running late` : "nothing late"} tone={late ? "red" : revenue - paid > 0 ? "amber" : undefined} />

@@ -133,8 +133,7 @@ export function OrderCard({
       {/* actions */}
       {!done && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {o.status === "confirmed" && mode !== "handoff" && <Btn primary onClick={() => run(() => setOrderStatus(o.id, "making"))}>Start</Btn>}
-          {(o.status === "making" || (o.status === "confirmed" && mode === "handoff")) && (
+          {(o.status === "making" || o.status === "confirmed") && (
             <Btn primary onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Ready</Btn>
           )}
           {o.status === "ready" && o.fulfillment === "pickup" && (
@@ -174,8 +173,7 @@ export function OrderCard({
                   </span>
                 </>
               )}
-              {o.status === "making" && <Btn onClick={() => run(() => setOrderStatus(o.id, "confirmed"))}>Un-start</Btn>}
-              {o.status === "ready" && <Btn onClick={() => run(() => setOrderStatus(o.id, "making"))}>Back to making</Btn>}
+              {o.status === "ready" && <Btn onClick={() => run(() => setOrderStatus(o.id, "confirmed"))}>Not ready</Btn>}
               <Btn
                 danger
                 onClick={() => {

@@ -26,6 +26,7 @@ export function LiveRefresh({ serviceId, intervalMs = 30000 }: { serviceId?: str
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", ...(filter ? { filter } : {}) }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "services" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "service_time_slots" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "service_waste" }, refresh)
       .subscribe((status) => setConnected(status === "SUBSCRIBED"));
 
     const tick = setInterval(() => router.refresh(), intervalMs);

@@ -35,14 +35,17 @@ export interface ServiceReport {
   lateCount: number;
   soldOutAt: string | null;
   sourceCounts: { source: string; count: number }[];
+  wastedUnits: number;
+  waste: { name: string; qty: number; reason: string }[];
 }
 
 export async function serviceReport(supabase: SupabaseClient, service: Service): Promise<ServiceReport> {
-  const [{ data: orderRows }, { data: paymentRows }, { data: expenseRows }, { data: slotRows }] = await Promise.all([
+  const [{ data: orderRows }, { data: paymentRows }, { data: expenseRows }, { data: slotRows }, { data: wasteRows }] = await Promise.all([
     supabase.from("orders").select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each)").eq("service_id", service.id).order("created_at"),
     supabase.from("payments").select("order_id, kind, method, amount_cents, status, orders!inner(service_id)").eq("orders.service_id", service.id),
     supabase.from("expenses").select("*").eq("service_id", service.id).is("deleted_at", null),
     supabase.from("service_time_slots").select("slot_start, capacity_units").eq("service_id", service.id).order("slot_start"),
+    supabase.from("service_waste").select("item_name, units, reason").eq("service_id", service.id),
   ]);
   const orders = (orderRows ?? []) as Order[];
   const live = orders.filter((o) => o.status !== "cancelled" && o.status !== "pending_payment");
@@ -110,6 +113,9 @@ export async function serviceReport(supabase: SupabaseClient, service: Service):
     }
   }
 
+  const wasteList = ((wasteRows ?? []) as { item_name: string; units: number; reason: string }[]).map((w) => ({ name: w.item_name, qty: Number(w.units), reason: w.reason }));
+  const wastedUnits = wasteList.reduce((a, w) => a + w.qty, 0);
+
   const srcMap = new Map<string, number>();
   for (const o of live) srcMap.set(o.source, (srcMap.get(o.source) ?? 0) + 1);
 
@@ -144,6 +150,8 @@ export async function serviceReport(supabase: SupabaseClient, service: Service):
     lateCount: lateOnes.length,
     soldOutAt,
     sourceCounts: Array.from(srcMap, ([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count),
+    wastedUnits,
+    waste: wasteList,
   };
 }
 
