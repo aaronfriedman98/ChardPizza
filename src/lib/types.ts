@@ -66,3 +66,79 @@ export interface DeliveryZone {
   is_active: boolean;
   sort_order: number;
 }
+
+export type ServiceStatus = "draft" | "scheduled" | "live" | "completed" | "cancelled" | "archived";
+export type OrderingOverride = "auto" | "open" | "paused" | "closed";
+
+export interface Service {
+  id: string;
+  name: string;
+  service_date: string; // YYYY-MM-DD
+  starts_at: string;
+  ends_at: string;
+  ordering_opens_at: string | null;
+  ordering_closes_at: string | null;
+  status: ServiceStatus;
+  ordering_override: OrderingOverride;
+  pizza_capacity_total: number;
+  slot_minutes: number;
+  default_slot_capacity: number;
+  pickup_enabled: boolean;
+  delivery_enabled: boolean;
+  cash_enabled: boolean;
+  zelle_enabled: boolean;
+  card_enabled: boolean;
+  allow_special_instructions: boolean;
+  preorder_reserve_units: number | null;
+  preorder_reserve_percent: number | null;
+  customer_instructions: string | null;
+  is_sold_out: boolean;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceMenuItem {
+  id: string;
+  service_id: string;
+  menu_item_id: string;
+  price_cents: number;
+  description_override: string | null;
+  is_available: boolean;
+  quantity_limit: number | null;
+  sold_out_manual: boolean;
+  sort_order: number;
+}
+
+export interface ServiceTimeSlot {
+  id: string;
+  service_id: string;
+  slot_start: string;
+  slot_end: string;
+  capacity_units: number;
+  preorder_cap_units: number | null;
+  is_blocked: boolean;
+  sort_order: number;
+}
+
+export interface SlotAvailability extends ServiceTimeSlot {
+  slot_id: string;
+  units_sold: number;
+  order_count: number;
+  units_remaining: number;
+}
+
+export interface ServiceDeliveryZone {
+  service_id: string;
+  delivery_zone_id: string;
+  fee_cents_override: number | null;
+}
+
+export interface ServiceAvailability {
+  service_id: string;
+  pizza_capacity_total: number;
+  units_sold: number;
+  units_remaining: number;
+  order_count: number;
+}

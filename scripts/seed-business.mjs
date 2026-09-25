@@ -33,7 +33,7 @@ const items = [
     description:
       "Classic sauce + mozzarella, finished with basil, shaved parmesan, and garlic-infused avocado oil.",
     category: "Pizza",
-    default_price_cents: 2200,
+    default_price_cents: 2500,
     capacity_units: 1,
     sku: "CHARD",
     sort_order: 10,
@@ -43,7 +43,7 @@ const items = [
     description:
       "Mozzarella + creamy ricotta, finished with basil, shaved parmesan, and garlic-infused avocado oil.",
     category: "Pizza",
-    default_price_cents: 2200,
+    default_price_cents: 2500,
     capacity_units: 1,
     sku: "BIANCA",
     sort_order: 20,
