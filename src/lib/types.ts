@@ -144,3 +144,29 @@ export interface ServiceAvailability {
   units_remaining: number;
   order_count: number;
 }
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface Expense {
+  id: string;
+  expense_date: string;
+  amount_cents: number;
+  category_id: string | null;
+  vendor: string | null;
+  description: string | null;
+  receipt_url: string | null;
+  service_id: string | null;
+  paid_by: "business" | "partner";
+  paid_by_admin_id: string | null;
+  is_reimbursable: boolean;
+  reimbursed_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+}
