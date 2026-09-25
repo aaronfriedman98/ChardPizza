@@ -1,10 +1,11 @@
+import { requireAdmin } from "@/lib/auth";
+import type { Settings } from "@/lib/types";
+import { SettingsForm } from "./settings-form";
+
 export const metadata = { title: "Settings | Char'd Pizza" };
 
-export default function Page() {
-  return (
-    <div className="space-y-6">
-      <h1 className="page-title">Settings</h1>
-      <div className="card text-ink/60">Coming in a later step.</div>
-    </div>
-  );
+export default async function SettingsPage() {
+  const { supabase } = await requireAdmin();
+  const { data } = await supabase.from("settings").select("*").eq("id", true).single();
+  return <SettingsForm settings={data as Settings} />;
 }
