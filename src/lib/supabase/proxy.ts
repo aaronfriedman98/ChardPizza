@@ -44,5 +44,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Admin pages should never be indexed.
+  response.headers.set("x-robots-tag", "noindex");
   return response;
 }

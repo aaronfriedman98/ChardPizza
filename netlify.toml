@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Keeps the free Supabase project from pausing after a week of inactivity.
+[functions]
+  directory = "netlify/functions"
+
+[functions."keepalive"]
+  schedule = "0 6 * * *"
