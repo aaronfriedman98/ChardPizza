@@ -58,6 +58,9 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
         <Field label="About (public site)" hint="A short paragraph for the website. Optional.">
           <textarea name="about_text" defaultValue={s.about_text ?? ""} rows={3} className="input" />
         </Field>
+        <Field label="Public site URL" hint="Used in share messages and the flyer QR code.">
+          <input name="public_url" type="url" defaultValue={s.public_url} className="input" required />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="WhatsApp group link">
             <input name="whatsapp_url" type="url" defaultValue={s.whatsapp_url ?? ""} className="input" />
@@ -131,6 +134,13 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
         <Field label="Closed">
           <input name="msg_closed" defaultValue={s.msg_closed} className="input" />
         </Field>
+      </Section>
+
+      <Section
+        title="Share message"
+        hint="The WhatsApp announcement for a service. Placeholders: {{service_name}} {{day}} {{date}} {{start}} {{end}} {{menu}} {{order_url}} {{delivery_line}} {{payment_line}} {{opens_line}}"
+      >
+        <textarea name="share_message_template" defaultValue={s.share_message_template} rows={8} className="input font-mono text-sm" />
       </Section>
 
       <div className="sticky bottom-20 md:bottom-4 flex items-center gap-3 rounded-2xl bg-white/95 backdrop-blur border border-line p-3 shadow-lg">

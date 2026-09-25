@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { Service, ServiceAvailability } from "@/lib/types";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 import { publicState, STATE_LABEL, STATE_TONE, STATUS_LABEL } from "@/lib/service-state";
+import Link from "next/link";
 import { DuplicateButton } from "../duplicate-button";
 import { setOrderingOverride, setServiceStatus, setSoldOut } from "../actions";
 
@@ -46,7 +47,14 @@ export function ServiceHeader({
             {Number(availability?.units_sold ?? 0)} / {s.pizza_capacity_total} pizza units · {orderCount} orders
           </div>
         </div>
-        <DuplicateButton id={s.id} />
+        <div className="flex items-center gap-2">
+          {isPublic && (
+            <Link href={`/admin/services/${s.id}/share`} className="btn-ghost border border-line text-sm">
+              Share
+            </Link>
+          )}
+          <DuplicateButton id={s.id} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

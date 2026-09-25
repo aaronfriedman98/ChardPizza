@@ -35,6 +35,8 @@ const settingsSchema = z.object({
   msg_paused: z.string().trim().min(1),
   msg_sold_out: z.string().trim().min(1),
   msg_closed: z.string().trim().min(1),
+  public_url: z.string().trim().url("Public site URL must be a full URL, like https://chardpizza.netlify.app"),
+  share_message_template: z.string().trim().min(1, "Share message template cannot be empty"),
 });
 
 export async function updateSettings(_prev: Result | undefined, formData: FormData): Promise<Result> {

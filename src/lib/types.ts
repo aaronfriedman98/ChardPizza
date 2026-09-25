@@ -40,6 +40,8 @@ export interface Settings {
   whatsapp_url: string | null;
   instagram_url: string | null;
   about_text: string | null;
+  public_url: string;
+  share_message_template: string;
   updated_at: string;
 }
 
