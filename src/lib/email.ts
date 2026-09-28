@@ -62,6 +62,7 @@ function esc(s: string) {
 
 function buildHtml(o: Order, s: Settings, intro: string, link: string) {
   const tz = s.time_zone;
+  const logo = `${s.public_url.replace(/\/+$/, "")}/brand/chard-logo-horizontal-dark.png`;
   const rows = o.order_items
     .map((it) => `<tr><td style="padding:6px 0">${it.quantity} × ${esc(it.item_name)}</td><td style="padding:6px 0;text-align:right">${formatCents(it.line_total_cents)}</td></tr>`)
     .join("");
@@ -80,7 +81,7 @@ function buildHtml(o: Order, s: Settings, intro: string, link: string) {
   return `<!doctype html><html><body style="margin:0;background:#f1e6d2;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#2a2321">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px">
   <div style="background:#160f0b;color:#f1e6d2;border-radius:4px;border:1px solid #c9a25c;padding:28px 24px;text-align:center">
-    <div style="font-size:30px;font-weight:600;font-style:italic;font-family:Georgia,'Times New Roman',serif">${esc(s.business_name)}</div>
+    <img src="${logo}" alt="${esc(s.business_name)}" width="220" style="display:block;margin:0 auto;width:220px;height:auto">
     <div style="margin-top:14px;font-size:13px;letter-spacing:3px;color:#c9a25c">ORDER NUMBER</div>
     <div style="font-size:34px;font-weight:900;color:#c9a25c">${esc(o.order_number)}</div>
     <div style="margin-top:12px;font-size:16px">${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>${esc(fmtDateOnly(o.scheduled_at.slice(0, 10), "EEEE, MMMM d"))}</b> at <b>${esc(fmtTime(o.scheduled_at, tz))}</b></div>

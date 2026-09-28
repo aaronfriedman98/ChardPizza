@@ -69,13 +69,13 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const footerLine = [s.pickup_enabled ? "Pickup" : "", s.delivery_enabled ? `Delivery to ${zones.join(" & ")}` : "", payments].filter(Boolean).join("   ·   ");
 
   const [cormorant, cormorantItalic, inter, interBold, qr, poster, brand] = await Promise.all([
-    font("InstrumentSerif-Regular.ttf"),
-    font("InstrumentSerif-Italic.ttf"),
-    font("Inter-Regular.ttf"),
-    font("Inter-SemiBold.ttf"),
+    font("BodoniModa-SemiBold.ttf"),
+    font("BodoniModa-SemiBoldItalic.ttf"),
+    font("Karla-Regular.ttf"),
+    font("Karla-Bold.ttf"),
     QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#160f0b", light: "#e3c783" } }),
     posterDataUri(),
-    font("RubikBurned-Regular.ttf"),
+    font("Anton-Regular.ttf"),
   ]);
   const logo = `data:image/svg+xml;utf8,${encodeURIComponent(logoMarkSvgString(120))}`;
   const day = fmtDateOnly(s.service_date, "EEEE");
@@ -83,7 +83,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
 
   return new ImageResponse(
     (
-      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", backgroundColor: WOOD, color: FLOUR, fontFamily: "Inter", position: "relative" }}>
+      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", backgroundColor: WOOD, color: FLOUR, fontFamily: "Karla", position: "relative" }}>
         {/* oven glow behind the top */}
         {poster && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -94,23 +94,23 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
         {/* header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "48px 64px 0 64px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} width={84} height={84} alt="" />
-          <div style={{ fontFamily: "CormorantItalic", fontSize: 64, color: FLOUR, marginTop: 2 }}>Char’d</div>
-          <div style={{ marginLeft: "auto", fontSize: 18, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 600 }}>Wood-fired · Southfield</div>
+          <img src={logo} width={96} height={67} alt="" />
+          <div style={{ fontFamily: "Brand", fontSize: 58, color: FLOUR, letterSpacing: 2, marginTop: 6 }}>{"CHAR'D"}</div>
+          <div style={{ marginLeft: "auto", fontSize: 18, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>Wood-fired · Southfield</div>
         </div>
 
         {/* headline */}
         <div style={{ display: "flex", flexDirection: "column", padding: "150px 64px 0 64px" }}>
-          <div style={{ fontSize: 20, letterSpacing: 8, color: GOLD, textTransform: "uppercase", fontWeight: 600 }}>{`${day} sale`}</div>
-          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 122, lineHeight: 0.95, color: FLOUR, marginTop: 14 }}>
+          <div style={{ fontSize: 20, letterSpacing: 8, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>{`${day} sale`}</div>
+          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 108, lineHeight: 0.98, color: FLOUR, marginTop: 14 }}>
             <span>Thin, crispy,&nbsp;</span>
           </div>
-          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 122, lineHeight: 0.95, color: FLOUR }}>
+          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 108, lineHeight: 0.98, color: FLOUR }}>
             <span>and&nbsp;</span>
             <span style={{ fontFamily: "CormorantItalic" }}>Char’d.</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 30, fontSize: 32, color: FLOUR2 }}>
-            <span style={{ color: FLOUR, fontWeight: 600 }}>{fmtDateOnly(s.service_date, "MMMM d")}</span>
+            <span style={{ color: FLOUR, fontWeight: 700 }}>{fmtDateOnly(s.service_date, "MMMM d")}</span>
             <span style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: GOLD }} />
             <span>{`${fmtTime(s.starts_at, tz)} – ${fmtTime(s.ends_at, tz)}`}</span>
           </div>
@@ -121,7 +121,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
 
         {/* menu */}
         <div style={{ display: "flex", flexDirection: "column", padding: "26px 64px 0 64px" }}>
-          <div style={{ fontSize: 16, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 600 }}>Tonight’s menu</div>
+          <div style={{ fontSize: 16, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>Tonight’s menu</div>
           {items.slice(0, 4).map((it, i) => (
             <div key={i} style={{ display: "flex", flexDirection: "column", paddingTop: 20, paddingBottom: 16, borderBottom: `1px solid ${LINE}` }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
@@ -137,7 +137,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
         {/* footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", padding: "0 64px 56px 64px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: GOLD, color: WOOD, fontSize: 22, letterSpacing: 6, textTransform: "uppercase", fontWeight: 600, padding: "20px 40px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: GOLD, color: WOOD, fontSize: 22, letterSpacing: 6, textTransform: "uppercase", fontWeight: 700, padding: "20px 40px" }}>
               {`Order at ${shortUrl}`}
             </div>
             <div style={{ fontSize: 22, color: FLOUR2 }}>{footerLine}</div>
@@ -154,11 +154,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
       width: W,
       height: H,
       fonts: [
-        { name: "Cormorant", data: cormorant, weight: 400, style: "normal" },
-        { name: "CormorantItalic", data: cormorantItalic, weight: 400, style: "italic" },
+        { name: "Cormorant", data: cormorant, weight: 600, style: "normal" },
+        { name: "CormorantItalic", data: cormorantItalic, weight: 600, style: "italic" },
         { name: "Brand", data: brand, weight: 400, style: "normal" },
-        { name: "Inter", data: inter, weight: 400, style: "normal" },
-        { name: "Inter", data: interBold, weight: 600, style: "normal" },
+        { name: "Karla", data: inter, weight: 400, style: "normal" },
+        { name: "Karla", data: interBold, weight: 700, style: "normal" },
       ],
       headers: { "Cache-Control": "no-store", "Content-Disposition": 'inline; filename="chard-pizza-flyer.png"' },
     },

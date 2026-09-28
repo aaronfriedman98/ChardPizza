@@ -46,9 +46,9 @@
   --color-goldline: var(--goldline);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-instrument), "Instrument Serif", Georgia, serif;
-  --font-body: var(--font-manrope), system-ui, sans-serif;
-  --font-brand: var(--font-rubik-burned), "Rubik Burned", Impact, sans-serif;
+  --font-display: var(--font-bodoni), "Bodoni Moda", "Didot", Georgia, serif;
+  --font-body: var(--font-karla), system-ui, sans-serif;
+  --font-brand: var(--font-anton), Anton, Impact, sans-serif;
 }
 
 body {
@@ -145,20 +145,20 @@ body {
   .brush { @apply inline-block bg-gold px-2 py-0.5 text-wood; }
 }
 
+.font-brand { font-family: var(--font-anton), Anton, Impact, sans-serif; }
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 .marquee { animation: marquee 40s linear infinite; }
 
-/* charred wordmark: scorched face, ember creeping up from the baseline */
+/* wordmark: Anton in cream with the grit filter defined in the public layout */
 .wordmark {
-  font-family: var(--font-brand);
-  background: linear-gradient(180deg, #f1e6d2 0%, #f1e6d2 56%, #d9b98a 72%, #e0642a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-family: var(--font-anton), Anton, Impact, sans-serif;
+  color: var(--flour);
   letter-spacing: 0.04em;
+  filter: url(#grit);
 }
 
 @keyframes flicker {
