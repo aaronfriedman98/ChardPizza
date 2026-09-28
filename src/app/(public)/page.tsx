@@ -12,8 +12,6 @@ function fill(template: string, vars: Record<string, string>) {
   return template.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "");
 }
 
-const STRIP = ["New Haven style", "16 inch pies", "Made to order", "Sale nights only", "Southfield, Michigan", "Blazing hot Italian oven"];
-
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { src } = await searchParams;
   const [settings, current] = await Promise.all([getSettings(), getCurrentService()]);
@@ -146,22 +144,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <span className="vline block w-px flex-1" />
         </div>
       </section>
-
-      {/* Gold strip */}
-      <div className="strip py-3.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-gold2">
-        <div className="strip-track marquee">
-          {[0, 1].map((rep) => (
-            <div key={rep} className="flex" aria-hidden={rep === 1}>
-              {STRIP.map((t) => (
-                <span key={t} className="strip-item">
-                  {t}
-                  <span className="strip-dot" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Current sale + menu */}
       {s && data && state !== "hidden" && state !== "completed" ? (
