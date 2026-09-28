@@ -68,13 +68,14 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const payments = [s.cash_enabled && "Cash", s.zelle_enabled && "Zelle", s.card_enabled && "Card"].filter(Boolean).join(" · ");
   const footerLine = [s.pickup_enabled ? "Pickup" : "", s.delivery_enabled ? `Delivery to ${zones.join(" & ")}` : "", payments].filter(Boolean).join("   ·   ");
 
-  const [cormorant, cormorantItalic, inter, interBold, qr, poster] = await Promise.all([
-    font("CormorantGaramond-Medium.ttf"),
-    font("CormorantGaramond-SemiBoldItalic.ttf"),
+  const [cormorant, cormorantItalic, inter, interBold, qr, poster, brand] = await Promise.all([
+    font("InstrumentSerif-Regular.ttf"),
+    font("InstrumentSerif-Italic.ttf"),
     font("Inter-Regular.ttf"),
     font("Inter-SemiBold.ttf"),
     QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#160f0b", light: "#e3c783" } }),
     posterDataUri(),
+    font("RubikBurned-Regular.ttf"),
   ]);
   const logo = `data:image/svg+xml;utf8,${encodeURIComponent(logoMarkSvgString(120))}`;
   const day = fmtDateOnly(s.service_date, "EEEE");
@@ -93,8 +94,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
         {/* header */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "48px 64px 0 64px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} width={64} height={64} alt="" />
-          <div style={{ fontFamily: "CormorantItalic", fontSize: 62, color: FLOUR, marginTop: 6 }}>Char’d</div>
+          <img src={logo} width={84} height={84} alt="" />
+          <div style={{ fontFamily: "CormorantItalic", fontSize: 64, color: FLOUR, marginTop: 2 }}>Char’d</div>
           <div style={{ marginLeft: "auto", fontSize: 18, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 600 }}>Wood-fired · Southfield</div>
         </div>
 
@@ -153,8 +154,9 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
       width: W,
       height: H,
       fonts: [
-        { name: "Cormorant", data: cormorant, weight: 500, style: "normal" },
-        { name: "CormorantItalic", data: cormorantItalic, weight: 600, style: "italic" },
+        { name: "Cormorant", data: cormorant, weight: 400, style: "normal" },
+        { name: "CormorantItalic", data: cormorantItalic, weight: 400, style: "italic" },
+        { name: "Brand", data: brand, weight: 400, style: "normal" },
         { name: "Inter", data: inter, weight: 400, style: "normal" },
         { name: "Inter", data: interBold, weight: 600, style: "normal" },
       ],

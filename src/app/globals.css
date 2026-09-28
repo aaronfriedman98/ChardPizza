@@ -46,8 +46,9 @@
   --color-goldline: var(--goldline);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-instrument), "Instrument Serif", Georgia, serif;
+  --font-body: var(--font-manrope), system-ui, sans-serif;
+  --font-brand: var(--font-rubik-burned), "Rubik Burned", Impact, sans-serif;
 }
 
 body {
@@ -121,8 +122,8 @@ body {
 }
 
 .eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.34em;
+  font-size: 11px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--gold);
   font-weight: 600;
@@ -142,6 +143,22 @@ body {
     @apply w-full rounded-[2px] border border-goldline bg-white/[0.03] px-4 py-3.5 text-base text-flour outline-none placeholder:text-flour2/60 focus:border-gold focus:ring-2 focus:ring-gold/20;
   }
   .brush { @apply inline-block bg-gold px-2 py-0.5 text-wood; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee { animation: marquee 40s linear infinite; }
+
+/* charred wordmark: scorched face, ember creeping up from the baseline */
+.wordmark {
+  font-family: var(--font-brand);
+  background: linear-gradient(180deg, #f1e6d2 0%, #f1e6d2 56%, #d9b98a 72%, #e0642a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 0.04em;
 }
 
 @keyframes flicker {
