@@ -77,26 +77,26 @@ function buildHtml(o: Order, s: Settings, intro: string, link: string) {
         : o.payment_method === "cash"
           ? "Cash due at pickup."
           : "";
-  return `<!doctype html><html><body style="margin:0;background:#f7f1e8;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#2a2321">
+  return `<!doctype html><html><body style="margin:0;background:#f1e6d2;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#2a2321">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px">
-  <div style="background:#141110;color:#f3ebdd;border-radius:16px;padding:28px 24px;text-align:center">
-    <div style="font-size:28px;font-weight:900;letter-spacing:1px">${esc(s.business_name)}</div>
-    <div style="margin-top:14px;font-size:13px;letter-spacing:3px;color:#f2a33a">ORDER NUMBER</div>
-    <div style="font-size:34px;font-weight:900;color:#f2a33a">${esc(o.order_number)}</div>
+  <div style="background:#160f0b;color:#f1e6d2;border-radius:4px;border:1px solid #c9a25c;padding:28px 24px;text-align:center">
+    <div style="font-size:30px;font-weight:600;font-style:italic;font-family:Georgia,'Times New Roman',serif">${esc(s.business_name)}</div>
+    <div style="margin-top:14px;font-size:13px;letter-spacing:3px;color:#c9a25c">ORDER NUMBER</div>
+    <div style="font-size:34px;font-weight:900;color:#c9a25c">${esc(o.order_number)}</div>
     <div style="margin-top:12px;font-size:16px">${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>${esc(fmtDateOnly(o.scheduled_at.slice(0, 10), "EEEE, MMMM d"))}</b> at <b>${esc(fmtTime(o.scheduled_at, tz))}</b></div>
   </div>
   <p style="font-size:16px;line-height:1.5;margin:20px 4px">${esc(intro).replace(/\n/g, "<br>")}</p>
-  <div style="background:#fff;border:1px solid #e8e0d4;border-radius:12px;padding:16px 18px">
+  <div style="background:#fff;border:1px solid #e8e0d4;border-radius:4px;padding:16px 18px">
     <table style="width:100%;border-collapse:collapse;font-size:15px">${rows}
       <tr><td style="padding-top:10px;border-top:1px solid #e8e0d4">Subtotal</td><td style="padding-top:10px;border-top:1px solid #e8e0d4;text-align:right">${formatCents(o.subtotal_cents)}</td></tr>
       ${o.delivery_fee_cents ? `<tr><td>Delivery</td><td style="text-align:right">${formatCents(o.delivery_fee_cents)}</td></tr>` : ""}
       <tr><td style="font-weight:700;font-size:17px;padding-top:6px">Total</td><td style="font-weight:700;font-size:17px;text-align:right;padding-top:6px">${formatCents(o.total_cents)}</td></tr>
     </table>
   </div>
-  <div style="background:#fff;border:1px solid #e8e0d4;border-radius:12px;padding:16px 18px;margin-top:12px;font-size:15px;line-height:1.5">${where}</div>
-  <div style="background:#fff7e8;border:1px solid #f2a33a;border-radius:12px;padding:16px 18px;margin-top:12px;font-size:15px;line-height:1.5"><b>Payment</b><br>${pay}</div>
+  <div style="background:#fff;border:1px solid #e8e0d4;border-radius:4px;padding:16px 18px;margin-top:12px;font-size:15px;line-height:1.5">${where}</div>
+  <div style="background:#fbf3e3;border:1px solid #c9a25c;border-radius:4px;padding:16px 18px;margin-top:12px;font-size:15px;line-height:1.5"><b>Payment</b><br>${pay}</div>
   ${o.special_instructions ? `<p style="margin:16px 4px;color:#777">Your note: ${esc(o.special_instructions)}</p>` : ""}
-  <p style="margin:20px 4px;font-size:14px"><a href="${link}" style="color:#c8551e">View your order status</a></p>
+  <p style="margin:20px 4px;font-size:14px"><a href="${link}" style="color:#8e3520">View your order status</a></p>
   <p style="margin:20px 4px;font-size:12px;color:#999">${esc(s.business_name)}${s.business_email ? " · " + esc(s.business_email) : ""}</p>
 </div></body></html>`;
 }

@@ -1,8 +1,14 @@
-import { Anton, Poppins } from "next/font/google";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton", display: "swap" });
-const poppins = Poppins({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-poppins", display: "swap" });
+const cormorant = Cormorant_Garamond({
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+const inter = Inter({ weight: ["400", "500", "600"], subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export default function PublicLayout({ children }: LayoutProps<"/">) {
-  return <div className={`public-theme ${anton.variable} ${poppins.variable}`}>{children}</div>;
+  return <div className={`public-theme ${cormorant.variable} ${inter.variable}`}>{children}</div>;
 }

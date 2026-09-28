@@ -79,21 +79,21 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
       <header className="mx-auto flex max-w-2xl items-center justify-between px-5 py-4">
         <Link href="/" className="flex items-center gap-2.5">
           <LogoMark size={32} />
-          <Wordmark className="text-xl" />
+          <Wordmark className="text-2xl" />
         </Link>
-        <span className="rounded-full border border-flour/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest">{STATUS_COPY[o.status] ?? o.status}</span>
+        <span className="rounded-full border border-goldline px-3 py-1 text-xs font-semibold uppercase tracking-widest">{STATUS_COPY[o.status] ?? o.status}</span>
       </header>
 
-      <section className="ember-glow">
+      <section className="">
         <div className="mx-auto max-w-2xl px-5 pb-12 pt-6 text-center">
-          <div className="rise text-xs font-semibold uppercase tracking-[0.3em] text-amber">{cancelled ? "Order cancelled" : "You're in"}</div>
-          <h1 className="rise rise-1 mt-2 font-display text-5xl uppercase leading-none sm:text-6xl">
+          <div className="rise text-xs font-semibold uppercase tracking-[0.3em] text-gold2">{cancelled ? "Order cancelled" : "You're in"}</div>
+          <h1 className="rise rise-1 mt-2 font-display text-[52px] font-medium leading-none sm:text-[64px]">
             {cancelled ? "Sorry, " : "Thanks, "}
             {first}
           </h1>
-          <div className="rise rise-2 mt-5 inline-block rounded-2xl border border-amber/40 bg-amber/10 px-6 py-3">
+          <div className="rise rise-2 mt-5 inline-block border border-gold/50 bg-gold/10 px-6 py-3">
             <div className="text-[11px] uppercase tracking-[0.3em] text-flour/60">Order number</div>
-            <div className="font-display text-4xl tracking-wider text-amber">{o.order_number}</div>
+            <div className="font-display text-[40px] font-medium tracking-[0.04em] text-gold2">{o.order_number}</div>
           </div>
           {!cancelled && (
             <p className="rise rise-3 mt-5 text-lg">
@@ -107,12 +107,12 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
       <section className="mx-auto max-w-2xl space-y-4 px-5 pb-16">
         {/* Payment */}
         {!cancelled && (
-          <div className={`rounded-2xl border p-5 ${o.payment_status === "paid" ? "border-green-500/40 bg-green-500/10" : "border-amber/40 bg-amber/[0.07]"}`}>
+          <div className={`border p-5 ${o.payment_status === "paid" ? "border-green-500/40 bg-green-500/10" : "border-gold/50 bg-gold/[0.08]"}`}>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-amber">Payment</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.25em] text-gold2">Payment</div>
               <div className="text-sm font-semibold">{PAY_COPY[o.payment_status] ?? o.payment_status}</div>
             </div>
-            <div className="mt-2 font-display text-3xl">{formatCents(o.total_cents)}</div>
+            <div className="mt-2 font-display text-[32px] font-medium">{formatCents(o.total_cents)}</div>
             {o.payment_method === "zelle" && o.payment_status !== "paid" && (
               <p className="mt-2 text-flour/85">{settings.zelle_instructions ?? "We'll send Zelle instructions shortly."}</p>
             )}
@@ -121,8 +121,8 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
         )}
 
         {/* Where */}
-        <div className="rounded-2xl border border-flour/10 bg-white/[0.03] p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-amber">{o.fulfillment === "delivery" ? "Delivering to" : "Pickup at"}</div>
+        <div className="border border-goldline bg-white/[0.03] p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-gold2">{o.fulfillment === "delivery" ? "Delivering to" : "Pickup at"}</div>
           {o.fulfillment === "delivery" ? (
             <div className="mt-2">
               <div className="font-semibold">
@@ -153,19 +153,19 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
         </div>
 
         {/* Items */}
-        <div className="rounded-2xl border border-flour/10 bg-white/[0.03] p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-amber">Your order</div>
+        <div className="border border-goldline bg-white/[0.03] p-5">
+          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-gold2">Your order</div>
           <ul className="mt-2 divide-y divide-flour/10">
             {o.order_items.map((it) => (
               <li key={it.id} className="flex justify-between py-2">
                 <span>
-                  <span className="font-display text-lg text-amber">{it.quantity}×</span> {it.item_name}
+                  <span className="font-display text-xl text-gold2">{it.quantity}×</span> {it.item_name}
                 </span>
                 <span>{formatCents(it.line_total_cents)}</span>
               </li>
             ))}
           </ul>
-          <div className="mt-3 space-y-1 border-t border-flour/10 pt-3 text-sm text-flour/70">
+          <div className="mt-3 space-y-1 border-t border-goldline pt-3 text-sm text-flour/70">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span>{formatCents(o.subtotal_cents)}</span>
@@ -184,8 +184,8 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
           {o.special_instructions && <p className="mt-3 text-sm text-flour/60">Note: {o.special_instructions}</p>}
         </div>
 
-        <div className="rounded-2xl border border-flour/10 bg-white/[0.03] p-5 text-sm text-flour/70">
-          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-amber">Details</div>
+        <div className="border border-goldline bg-white/[0.03] p-5 text-sm text-flour/70">
+          <div className="text-xs font-semibold uppercase tracking-[0.25em] text-gold2">Details</div>
           <div className="mt-2">
             {o.customer_name} · {formatPhone(o.customer_phone)}
             {o.customer_email ? ` · ${o.customer_email}` : ""}
@@ -193,7 +193,7 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
           <p className="mt-2">Keep this link. It shows your order status, and it&rsquo;s where we&rsquo;ll update you if anything changes.</p>
           {settings.business_email && (
             <p className="mt-2">
-              Questions? <a className="text-amber hover:underline" href={`mailto:${settings.business_email}`}>{settings.business_email}</a>
+              Questions? <a className="text-gold2 hover:underline" href={`mailto:${settings.business_email}`}>{settings.business_email}</a>
             </p>
           )}
         </div>

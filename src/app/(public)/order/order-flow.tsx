@@ -154,7 +154,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
   return (
     <div className="min-h-dvh pb-32">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-flour/10 bg-coal/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-goldline bg-wood/90 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
           {step > 1 ? (
             <button onClick={back} className="grid h-10 w-10 place-items-center rounded-full text-flour/80 hover:bg-white/10" aria-label="Back">
@@ -166,12 +166,12 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
             </Link>
           )}
           <div className="flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-amber">Step {step} of 4</div>
-            <div className="font-display text-xl uppercase tracking-wide">{STEP_TITLES[step]}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold2">Step {step} of 4</div>
+            <div className="font-display text-[24px] font-medium">{STEP_TITLES[step]}</div>
           </div>
           <div className="flex items-center gap-2">
             <LogoMark size={28} />
-            <Wordmark className="hidden text-lg sm:inline" />
+            <Wordmark className="hidden text-2xl sm:inline" />
           </div>
         </div>
         <div className="h-1 bg-white/5">
@@ -181,7 +181,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
 
       <main className="mx-auto max-w-2xl px-4 pt-6">
         {error && (
-          <div className="mb-5 rounded-xl border border-brick/50 bg-brick/15 px-4 py-3 text-sm font-medium text-flour" role="alert">
+          <div className="mb-5 rounded-xl border border-fire/50 bg-fire/15 px-4 py-3 text-sm font-medium text-flour" role="alert">
             {error}
           </div>
         )}
@@ -193,7 +193,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
               <div className="text-sm text-flour/60">
                 {fmtDateOnly(s.service_date, "EEEE, MMMM d")} · pickup {fmtTime(s.starts_at, tz)} to {fmtTime(s.ends_at, tz)}
               </div>
-              <h1 className="font-display text-4xl uppercase leading-none text-flour">What are you having?</h1>
+              <h1 className="font-display text-[40px] font-medium leading-none text-flour">What are you having?</h1>
             </div>
             <ul className="space-y-3">
               {items.map((item) => {
@@ -202,13 +202,13 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                 return (
                   <li
                     key={item.smi_id}
-                    className={`rounded-2xl border p-4 transition ${qty > 0 ? "border-amber/70 bg-amber/[0.06]" : "border-flour/10 bg-white/[0.03]"} ${item.is_sold_out ? "opacity-50" : ""}`}
+                    className={`border p-4 transition ${qty > 0 ? "border-gold/70 bg-gold/[0.07]" : "border-goldline bg-white/[0.03]"} ${item.is_sold_out ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="font-display text-2xl uppercase tracking-wide">{item.name}</div>
+                        <div className="font-display text-[26px] font-medium">{item.name}</div>
                         {item.description && <p className="mt-1 text-sm text-flour/65">{item.description}</p>}
-                        <div className="mt-2 font-display text-xl text-amber">{formatCents(item.price_cents)}</div>
+                        <div className="mt-2 font-display text-xl text-gold2">{formatCents(item.price_cents)}</div>
                       </div>
                       {item.is_sold_out ? (
                         <span className="brush shrink-0 text-xs font-bold uppercase tracking-widest">Sold out</span>
@@ -217,15 +217,15 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                           Add
                         </button>
                       ) : (
-                        <div className="flex shrink-0 items-center rounded-xl border border-amber/60">
-                          <button onClick={() => setQty(item.smi_id, qty - 1)} className="h-11 w-11 text-xl text-amber" aria-label={`Fewer ${item.name}`}>
+                        <div className="flex shrink-0 items-center border border-gold">
+                          <button onClick={() => setQty(item.smi_id, qty - 1)} className="h-11 w-11 text-xl text-gold2" aria-label={`Fewer ${item.name}`}>
                             −
                           </button>
                           <span className="w-8 text-center font-display text-2xl">{qty}</span>
                           <button
                             onClick={() => setQty(item.smi_id, qty + 1)}
                             disabled={maxed}
-                            className="h-11 w-11 text-xl text-amber disabled:opacity-30"
+                            className="h-11 w-11 text-xl text-gold2 disabled:opacity-30"
                             aria-label={`More ${item.name}`}
                           >
                             +
@@ -234,7 +234,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                       )}
                     </div>
                     {item.quantity_remaining != null && item.quantity_remaining <= 5 && !item.is_sold_out && (
-                      <div className="mt-2 text-xs text-amber">Only {item.quantity_remaining} left</div>
+                      <div className="mt-2 text-xs text-gold2">Only {item.quantity_remaining} left</div>
                     )}
                   </li>
                 );
@@ -247,12 +247,12 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
         {step === 2 && (
           <section key="s2" className="slide-in space-y-6">
             {s.pickup_enabled && s.delivery_enabled && (
-              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1.5">
+              <div className="grid grid-cols-2 gap-2 border border-goldline p-1">
                 {(["pickup", "delivery"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setFulfillment(f)}
-                    className={`rounded-xl py-3 font-display text-lg uppercase tracking-wide transition ${fulfillment === f ? "bg-amber text-coal" : "text-flour/70"}`}
+                    className={`py-3 font-display text-xl font-medium transition ${fulfillment === f ? "bg-gold text-wood" : "text-flour/70"}`}
                   >
                     {f}
                   </button>
@@ -262,13 +262,13 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
 
             {fulfillment === "delivery" && (
               <div className="space-y-3">
-                <h2 className="font-display text-3xl uppercase leading-none">Where to?</h2>
+                <h2 className="font-display text-[34px] font-medium leading-none">Where to?</h2>
                 <div className="grid grid-cols-2 gap-2">
                   {data.zones.map((z) => (
                     <button
                       key={z.id}
                       onClick={() => setZoneId(z.id)}
-                      className={`rounded-xl border px-3 py-3 text-left transition ${zoneId === z.id ? "border-amber bg-amber/10" : "border-flour/15"}`}
+                      className={`border px-3 py-3 text-left transition ${zoneId === z.id ? "border-gold bg-gold/10" : "border-goldline"}`}
                     >
                       <div className="font-semibold">{z.name}</div>
                       <div className="text-sm text-flour/60">+{formatCents(z.fee_cents)} delivery</div>
@@ -286,7 +286,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
 
             <div className="space-y-3">
               <div>
-                <h2 className="font-display text-3xl uppercase leading-none">{fulfillment === "delivery" ? "What time?" : "Pickup time"}</h2>
+                <h2 className="font-display text-[34px] font-medium leading-none">{fulfillment === "delivery" ? "What time?" : "Pickup time"}</h2>
                 <p className="mt-1 text-sm text-flour/60">
                   {units > 0 ? `Times that can fit ${units} ${units === 1 ? "pizza" : "pizzas"}.` : "Pick a window."}
                 </p>
@@ -302,19 +302,19 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                       key={slot.id}
                       disabled={!ok}
                       onClick={() => setSlotId(slot.id)}
-                      className={`rounded-xl border px-2 py-3 text-center transition ${
-                        chosen ? "border-amber bg-amber text-coal" : ok ? "border-flour/15 hover:border-amber/60" : "border-flour/5 text-flour/25 line-through"
+                      className={`border px-2 py-3 text-center transition ${
+                        chosen ? "border-gold bg-gold text-wood" : ok ? "border-goldline hover:border-gold/60" : "border-goldline/40 text-flour/25 line-through"
                       }`}
                     >
                       <div className="font-display text-lg leading-none">{fmtTime(slot.slot_start, tz)}</div>
                       {!ok && !slot.is_blocked && slot.remaining > 0 && <div className="mt-1 text-[10px] no-underline">only {slot.remaining} left</div>}
-                      {tight && !chosen && <div className="mt-1 text-[10px] text-amber">{slot.remaining} left</div>}
+                      {tight && !chosen && <div className="mt-1 text-[10px] text-gold2">{slot.remaining} left</div>}
                     </button>
                   );
                 })}
               </div>
               {!slotId && firstOk && units > 0 && data.slots.some((x) => !slotOk(x)) && (
-                <button onClick={() => setSlotId(firstOk.id)} className="text-sm text-amber underline-offset-4 hover:underline">
+                <button onClick={() => setSlotId(firstOk.id)} className="text-sm text-gold2 underline-offset-4 hover:underline">
                   Earliest that fits your order: {fmtTime(firstOk.slot_start, tz)}
                 </button>
               )}
@@ -326,14 +326,14 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
         {step === 3 && (
           <section key="s3" className="slide-in space-y-6">
             <div className="space-y-3">
-              <h2 className="font-display text-3xl uppercase leading-none">Who&rsquo;s picking up?</h2>
+              <h2 className="font-display text-[34px] font-medium leading-none">Who&rsquo;s picking up?</h2>
               <input className="field" placeholder="Your name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} autoComplete="name" />
               <input className="field" type="tel" placeholder="Phone number" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} autoComplete="tel" inputMode="tel" />
               <input className="field" type="email" placeholder="Email (for your confirmation)" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} autoComplete="email" inputMode="email" />
             </div>
 
             <div className="space-y-3">
-              <h2 className="font-display text-3xl uppercase leading-none">How will you pay?</h2>
+              <h2 className="font-display text-[34px] font-medium leading-none">How will you pay?</h2>
               <div className="space-y-2">
                 {s.zelle_enabled && (
                   <PayOption on={payment === "zelle"} onClick={() => setPayment("zelle")} title="Zelle" sub={zelleText ?? "We'll send instructions."} />
@@ -345,7 +345,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
 
             {s.allow_special_instructions && (
               <div className="space-y-2">
-                <h2 className="font-display text-2xl uppercase leading-none text-flour/80">Anything we should know?</h2>
+                <h2 className="font-display text-[28px] font-medium leading-none text-flour/80">Anything we should know?</h2>
                 <textarea className="field" rows={2} placeholder="Optional. Allergies, well done, etc." value={special} onChange={(e) => setSpecial(e.target.value)} maxLength={300} />
               </div>
             )}
@@ -355,20 +355,20 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
         {/* STEP 4: REVIEW */}
         {step === 4 && (
           <section key="s4" className="slide-in space-y-5">
-            <h2 className="font-display text-4xl uppercase leading-none">Look good?</h2>
-            <div className="rounded-2xl border border-flour/10 bg-white/[0.03] p-4">
+            <h2 className="font-display text-[40px] font-medium leading-none">Look good?</h2>
+            <div className="border border-goldline bg-white/[0.03] p-4">
               <ul className="divide-y divide-flour/10">
                 {lines.map((l) => (
                   <li key={l.item.smi_id} className="flex justify-between py-2">
                     <span>
-                      <span className="font-display text-lg text-amber">{l.qty}×</span> {l.item.name}
+                      <span className="font-display text-lg text-gold2">{l.qty}×</span> {l.item.name}
                     </span>
                     <span>{formatCents(priceOf(l.item) * l.qty)}</span>
                   </li>
                 ))}
               </ul>
-              {pricing && <div className="mt-2 text-xs text-amber">{pricing.tier} pricing applied: {formatCents(pricing.pie_price_cents)} per pie.</div>}
-              <div className="mt-3 space-y-1 border-t border-flour/10 pt-3 text-sm text-flour/70">
+              {pricing && <div className="mt-2 text-xs text-gold2">{pricing.tier} pricing applied: {formatCents(pricing.pie_price_cents)} per pie.</div>}
+              <div className="mt-3 space-y-1 border-t border-goldline pt-3 text-sm text-flour/70">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>{formatCents(subtotal)}</span>
@@ -417,7 +417,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
       </main>
 
       {/* Sticky bottom bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-flour/10 bg-coal/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-goldline bg-wood/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center gap-4 px-4 py-3">
           <div className="flex-1 leading-tight">
             <div className="text-xs uppercase tracking-widest text-flour/50">{count === 0 ? "Your order" : `${count} item${count === 1 ? "" : "s"}`}</div>
@@ -440,9 +440,9 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
 
 function PayOption({ on, onClick, title, sub }: { on: boolean; onClick: () => void; title: string; sub: string }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition ${on ? "border-amber bg-amber/10" : "border-flour/15 hover:border-flour/30"}`}>
-      <span className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border ${on ? "border-amber bg-amber" : "border-flour/40"}`}>
-        {on && <span className="h-2 w-2 rounded-full bg-coal" />}
+    <button onClick={onClick} className={`flex w-full items-start gap-3 border p-4 text-left transition ${on ? "border-gold bg-gold/10" : "border-goldline hover:border-flour/30"}`}>
+      <span className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border ${on ? "border-gold bg-amber" : "border-flour/40"}`}>
+        {on && <span className="h-2 w-2 rounded-full bg-wood" />}
       </span>
       <span>
         <span className="block font-semibold">{title}</span>
@@ -454,9 +454,9 @@ function PayOption({ on, onClick, title, sub }: { on: boolean; onClick: () => vo
 
 function Summary({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-flour/10 bg-white/[0.03] p-4 text-sm">
+    <div className="border border-goldline bg-white/[0.03] p-4 text-sm">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-widest text-amber">{title}</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-gold2">{title}</span>
         <button onClick={onEdit} className="text-xs text-flour/60 underline-offset-2 hover:underline">
           Edit
         </button>
