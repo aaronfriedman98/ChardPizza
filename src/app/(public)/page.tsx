@@ -80,25 +80,31 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {/* Hero: the oven, unobstructed. Only the mark and one line sit on it, low. */}
       <section className="relative h-[min(100svh,860px)] overflow-hidden">
-        <video
-          className="hero-video absolute inset-0 h-full w-full object-cover object-[center_55%]"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/media/hero-oven.jpg"
-          preload="metadata"
-        >
-          <source src="/media/hero-oven.mp4" type="video/mp4" />
-        </video>
-        <div className="hero-glow" />
-        <Embers />
-        {/* Shade only the left stone wall so the type reads; the oven mouth stays untouched. */}
-        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(22,15,11,0.8)_0%,rgba(22,15,11,0.4)_26%,transparent_46%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(22,15,11,0.4)_0%,transparent_24%,transparent_82%,rgba(22,15,11,0.65)_100%)]" />
+        {/* The oven fills its own panel on the right; the left is walnut, cleared for the copy.
+            On phones the panel is the whole frame and the copy sits over its dimmed top. */}
+        <div className="absolute inset-y-0 right-0 w-full overflow-hidden md:w-[62%] lg:w-[58%]">
+          <video
+            className="hero-video absolute inset-0 h-full w-full object-cover object-[center_55%]"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/media/hero-oven.jpg"
+            preload="metadata"
+          >
+            <source src="/media/hero-oven.mp4" type="video/mp4" />
+          </video>
+          <div className="hero-glow" />
+          <Embers />
+          {/* Feather the panel's left edge into the wood so there is no hard seam. */}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#160f0b_0%,rgba(22,15,11,0.75)_14%,rgba(22,15,11,0.25)_34%,transparent_58%)]" />
+        </div>
+        {/* Phone-only scrim: the copy sits over the footage, so darken behind it. */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(22,15,11,0.9)_0%,rgba(22,15,11,0.72)_46%,rgba(22,15,11,0.35)_70%,rgba(22,15,11,0.7)_100%)] md:hidden" />
+        <div className="absolute inset-0 hidden bg-[linear-gradient(180deg,rgba(22,15,11,0.4)_0%,transparent_20%,transparent_86%,rgba(22,15,11,0.55)_100%)] md:block" />
 
-        {/* Corner anchor: copy sits in the dark upper-left, one word per line. */}
-        <div className="hero-copy absolute left-5 right-5 top-[112px] sm:left-8 sm:top-[150px] md:max-w-[640px]">
+        {/* Copy occupies the cleared left side, vertically centred. */}
+        <div className="hero-copy absolute inset-y-0 left-0 flex max-w-[94%] flex-col justify-center px-6 sm:px-10 md:max-w-[46%] md:px-12 lg:px-16 xl:px-20">
           <p className="hero-item eyebrow">Southfield, Michigan</p>
           <h1 className="hero-item mt-5 font-display text-[clamp(56px,8vw,104px)] font-medium leading-[0.92] tracking-[-0.02em] text-flour">
             <span className="headline-word"><span>Thin.</span></span>
@@ -110,7 +116,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <p className="hero-item mt-7 max-w-[38ch] text-[15px] leading-relaxed text-flour2 sm:text-[17px]">
             New Haven-style pies from an Italian oven that runs blazing hot. Made to order on sale nights.
           </p>
-          <div className="hero-item mt-7 flex flex-wrap items-center gap-3">
+          <div className="hero-item mt-8 flex flex-wrap items-center gap-3">
             {state === "open" ? (
               <Link href={orderHref} className="btn-amber px-7 py-4">
                 Order for {s ? fmtDateOnly(s.service_date, "EEEE") : "tonight"}
@@ -126,19 +132,19 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               </a>
             )}
           </div>
+          <p className="hero-item mt-8 flex items-center gap-2.5 text-[12px] uppercase tracking-[0.2em] text-flour2">
+            <span className={`h-1.5 w-1.5 rounded-full ${state === "open" ? "live-dot bg-fire" : "bg-flour2/50"}`} />
+            {stateLine[state]}
+            {showRemaining && ` · ${remaining} spots left`}
+          </p>
         </div>
 
-        {/* Vertical gold line and running label down the right edge. */}
-        <div className="hero-item absolute right-8 top-[150px] bottom-16 hidden flex-col items-center gap-4 md:flex">
+        {/* Tagline running up the right edge of the frame. */}
+        <div className="hero-item absolute inset-y-16 right-7 hidden flex-col items-center gap-5 lg:flex">
           <span className="vline block w-px flex-1" />
-          <span className="text-[11px] uppercase tracking-[0.3em] text-flour2/70 [writing-mode:vertical-rl] [transform:rotate(180deg)]">New Haven style · Italian oven · Sale nights only</span>
+          <span className="whitespace-nowrap text-[10px] uppercase tracking-[0.34em] text-flour2/70 [writing-mode:vertical-rl] [transform:rotate(180deg)]">New Haven style · Italian oven · Sale nights only</span>
+          <span className="vline block w-px flex-1" />
         </div>
-
-        <p className="hero-item absolute bottom-8 left-5 flex items-center gap-2.5 text-[12px] uppercase tracking-[0.2em] text-flour2 sm:left-8">
-          <span className={`h-1.5 w-1.5 rounded-full ${state === "open" ? "live-dot bg-fire" : "bg-flour2/50"}`} />
-          {stateLine[state]}
-          {showRemaining && ` · ${remaining} spots left`}
-        </p>
       </section>
 
       {/* Gold strip */}
