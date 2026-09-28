@@ -93,43 +93,52 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </video>
         <div className="hero-glow" />
         <Embers />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(22,15,11,0.5)_0%,transparent_26%)]" />
+        {/* Shade only the left stone wall so the type reads; the oven mouth stays untouched. */}
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(22,15,11,0.8)_0%,rgba(22,15,11,0.4)_26%,transparent_46%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(22,15,11,0.4)_0%,transparent_24%,transparent_82%,rgba(22,15,11,0.65)_100%)]" />
 
-        {/* Lower third: the oven stays clear above; the message rides a band across the bottom. */}
-        <div className="hero-band absolute inset-x-0 bottom-0">
-          <div className="mx-auto grid max-w-7xl gap-6 px-5 py-8 sm:px-8 sm:py-10 md:grid-cols-[1.25fr_1fr] md:items-center md:gap-12">
-            <div>
-              <p className="band-item eyebrow">New Haven style · Italian oven · Southfield</p>
-              <h1 className="band-item mt-3 font-display text-[clamp(40px,5.6vw,80px)] font-medium leading-[0.95] tracking-[-0.01em] text-flour">
-                <span className="headline-word"><span>Thin,</span></span>{" "}
-                <span className="headline-word"><span>crispy,</span></span>{" "}
-                <span className="headline-word"><span>and</span></span>{" "}
-                <span className="headline-word"><span><em className="underline-draw italic font-normal">Char&rsquo;d.</em></span></span>
-              </h1>
-            </div>
-            <div className="band-item md:border-l md:border-goldline md:pl-10">
-              <p className="max-w-[44ch] text-[15px] leading-relaxed text-flour2 sm:text-[16px]">
-                Pies out of an oven that runs blazing hot. Little fluff, a lot of crunch, a proper edge. Made to order on sale nights, boxed the minute they come out.
-              </p>
-              <div className="mt-5 flex flex-wrap items-center gap-3.5">
-                {state === "open" ? (
-                  <Link href={orderHref} className="btn-amber px-7 py-3.5">
-                    Order for {s ? fmtDateOnly(s.service_date, "EEEE") : "tonight"}
-                  </Link>
-                ) : (
-                  <a href="#sale" className="btn-amber px-7 py-3.5">
-                    See the next sale
-                  </a>
-                )}
-                <span className="flex items-center gap-2.5 text-[12px] uppercase tracking-[0.2em] text-flour2">
-                  <span className={`h-1.5 w-1.5 rounded-full ${state === "open" ? "live-dot bg-fire" : "bg-flour2/50"}`} />
-                  {stateLine[state]}
-                  {showRemaining && ` · ${remaining} spots left`}
-                </span>
-              </div>
-            </div>
+        {/* Corner anchor: copy sits in the dark upper-left, one word per line. */}
+        <div className="hero-copy absolute left-5 right-5 top-[112px] sm:left-8 sm:top-[150px] md:max-w-[640px]">
+          <p className="hero-item eyebrow">Southfield, Michigan</p>
+          <h1 className="hero-item mt-5 font-display text-[clamp(56px,8vw,104px)] font-medium leading-[0.92] tracking-[-0.02em] text-flour">
+            <span className="headline-word"><span>Thin.</span></span>
+            <br />
+            <span className="headline-word"><span>Crispy.</span></span>
+            <br />
+            <span className="headline-word"><span><em className="underline-draw italic font-normal">Char&rsquo;d.</em></span></span>
+          </h1>
+          <p className="hero-item mt-7 max-w-[38ch] text-[15px] leading-relaxed text-flour2 sm:text-[17px]">
+            New Haven-style pies from an Italian oven that runs blazing hot. Made to order on sale nights.
+          </p>
+          <div className="hero-item mt-7 flex flex-wrap items-center gap-3">
+            {state === "open" ? (
+              <Link href={orderHref} className="btn-amber px-7 py-4">
+                Order for {s ? fmtDateOnly(s.service_date, "EEEE") : "tonight"}
+              </Link>
+            ) : (
+              <a href="#sale" className="btn-amber px-7 py-4">
+                See the next sale
+              </a>
+            )}
+            {settings.whatsapp_url && (
+              <a href={settings.whatsapp_url} target="_blank" rel="noopener" className="btn-outline px-6 py-4">
+                Join the WhatsApp
+              </a>
+            )}
           </div>
         </div>
+
+        {/* Vertical gold line and running label down the right edge. */}
+        <div className="hero-item absolute right-8 top-[150px] bottom-16 hidden flex-col items-center gap-4 md:flex">
+          <span className="vline block w-px flex-1" />
+          <span className="text-[11px] uppercase tracking-[0.3em] text-flour2/70 [writing-mode:vertical-rl] [transform:rotate(180deg)]">New Haven style · Italian oven · Sale nights only</span>
+        </div>
+
+        <p className="hero-item absolute bottom-8 left-5 flex items-center gap-2.5 text-[12px] uppercase tracking-[0.2em] text-flour2 sm:left-8">
+          <span className={`h-1.5 w-1.5 rounded-full ${state === "open" ? "live-dot bg-fire" : "bg-flour2/50"}`} />
+          {stateLine[state]}
+          {showRemaining && ` · ${remaining} spots left`}
+        </p>
       </section>
 
       {/* Gold strip */}

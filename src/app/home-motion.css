@@ -103,31 +103,31 @@
   100% { transform: translate3d(var(--drift), -78vh, 0) scale(0.2); opacity: 0; }
 }
 
-/* Lower-third band: slides up over the oven, then its contents fade in one after another. */
-.hero-band {
-  background: linear-gradient(180deg, rgba(22, 15, 11, 0.55) 0%, rgba(22, 15, 11, 0.9) 26%, rgba(22, 15, 11, 0.96) 100%);
-  border-top: 1px solid var(--goldline);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: band-up 1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.25s both;
-}
-@keyframes band-up {
-  from { transform: translateY(100%); }
-  to { transform: none; }
-}
-.band-item { animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.band-item:nth-child(1) { animation-delay: 0.85s; }
-.band-item:nth-child(2) { animation-delay: 1s; }
-.hero-band .band-item + .band-item { animation-delay: 1.1s; }
-/* the headline words are already masked; run them once the band has landed */
-.hero-band .headline-word > span { transform: translateY(110%); animation: word-up 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
-.hero-band .headline-word:nth-child(1) > span { animation-delay: 0.95s; }
-.hero-band .headline-word:nth-child(2) > span { animation-delay: 1.03s; }
-.hero-band .headline-word:nth-child(3) > span { animation-delay: 1.11s; }
-.hero-band .headline-word:nth-child(4) > span { animation-delay: 1.19s; }
+/* Hero copy in the dark corner: each piece rises in, one after another. */
+.hero-item { animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.hero-copy .hero-item:nth-child(1) { animation-delay: 0.25s; }
+.hero-copy .hero-item:nth-child(3) { animation-delay: 0.95s; }
+.hero-copy .hero-item:nth-child(4) { animation-delay: 1.1s; }
+.hero-item:not(.hero-copy .hero-item) { animation-delay: 1.3s; }
+
+.hero-copy .headline-word > span { transform: translateY(110%); animation: word-up 1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.hero-copy .headline-word:nth-of-type(1) > span { animation-delay: 0.4s; }
+.hero-copy .headline-word:nth-of-type(2) > span { animation-delay: 0.52s; }
+.hero-copy .headline-word:nth-of-type(3) > span { animation-delay: 0.64s; }
 @keyframes word-up { to { transform: none; } }
-.hero-band .underline-draw::after { transform: scaleX(0); animation: draw 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 1.9s forwards; }
+.hero-copy .underline-draw::after { transform: scaleX(0); animation: draw 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) 1.5s forwards; }
 @keyframes draw { to { transform: scaleX(1); } }
+
+/* Gold rule down the right edge, drawn from the top. */
+.vline {
+  background: linear-gradient(180deg, var(--gold), transparent);
+  transform-origin: top;
+  animation: vline-grow 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.8s both;
+}
+@keyframes vline-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
 
 /* Scroll cue at the hero foot. */
 .scroll-cue {
@@ -288,9 +288,10 @@ html:where(.js) .meter > span {
 .public-theme ::selection { background: var(--gold); color: var(--wood); }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-video, .hero-glow, .ember, .scroll-cue::after, .live-dot::after, .marquee, .hero-band, .band-item, .hero-band .headline-word > span, .hero-band .underline-draw::after { animation: none; }
-  .hero-band .headline-word > span { transform: none; }
-  .hero-band .underline-draw::after { transform: scaleX(1); }
+  .hero-video, .hero-glow, .ember, .scroll-cue::after, .live-dot::after, .marquee, .hero-item, .vline, .hero-copy .headline-word > span, .hero-copy .underline-draw::after { animation: none; }
+  .hero-copy .headline-word > span { transform: none; }
+  .hero-copy .underline-draw::after { transform: scaleX(1); }
+  .vline { transform: none; }
   .reveal, .headline-word > span, .underline-draw::after, .meter > span { transition: none; }
   .reveal { opacity: 1; transform: none; }
   .headline-word > span { transform: none; }
