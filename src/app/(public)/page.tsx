@@ -79,21 +79,25 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {/* Hero: full-bleed oven. Copy sits over the dark stone at the upper left, aligned to
           the same content column as every section below so the page has one left edge. */}
       <section className="relative h-[min(100svh,880px)] overflow-hidden">
-        <video
-          className="hero-video absolute inset-0 h-full w-full object-cover object-[62%_55%] md:object-[center_55%]"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/media/hero-oven.jpg"
-          preload="metadata"
-        >
-          <source src="/media/hero-oven.mp4" type="video/mp4" />
-        </video>
+        {/* The footage is only slightly wider than the frame, so the video box is oversized and
+            anchored right: the oven arch lands in the right half, clear of the copy. */}
+        <div className="absolute inset-y-0 left-0 w-full overflow-hidden md:w-[132%] lg:w-[128%]">
+          <video
+            className="hero-video absolute inset-0 h-full w-full object-cover object-[62%_55%] md:object-[center_55%]"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/media/hero-oven.jpg"
+            preload="metadata"
+          >
+            <source src="/media/hero-oven.mp4" type="video/mp4" />
+          </video>
+        </div>
         <div className="hero-glow" />
         <Embers />
         {/* Shade the left so the type reads; the oven mouth keeps its colour. */}
-        <div className="absolute inset-0 bg-[linear-gradient(104deg,rgba(22,15,11,0.9)_0%,rgba(22,15,11,0.66)_26%,rgba(22,15,11,0.2)_48%,transparent_62%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(22,15,11,0.92)_0%,rgba(22,15,11,0.7)_22%,rgba(22,15,11,0.24)_42%,transparent_56%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(22,15,11,0.5)_0%,transparent_26%,transparent_80%,rgba(22,15,11,0.62)_100%)]" />
 
         <div className="hero-copy absolute inset-x-0 top-[26%] mx-auto max-w-7xl px-5 sm:px-8 md:top-[24%]">
