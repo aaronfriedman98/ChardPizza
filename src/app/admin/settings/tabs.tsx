@@ -7,6 +7,7 @@ const TABS = [
   { href: "/admin/settings", label: "General" },
   { href: "/admin/settings/zones", label: "Delivery Zones" },
   { href: "/admin/settings/messages", label: "Messages" },
+  { href: "/admin/settings/pricing", label: "Pricing" },
   { href: "/admin/settings/account", label: "Account & Team" },
 ];
 

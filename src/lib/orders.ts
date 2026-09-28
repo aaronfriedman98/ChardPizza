@@ -44,6 +44,9 @@ export interface Order {
   payment_status: PaymentStatus;
   special_instructions: string | null;
   source: string;
+  price_tier_id: string | null;
+  pie_price_override_cents: number | null;
+  pricing_note: string | null;
   created_by_admin_id: string | null;
   started_at: string | null;
   ready_at: string | null;

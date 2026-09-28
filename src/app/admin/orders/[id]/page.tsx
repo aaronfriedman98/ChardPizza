@@ -9,6 +9,8 @@ import { OrderCard } from "@/components/admin/order-card";
 import { LiveRefresh } from "@/components/admin/live-refresh";
 import { NoteForm } from "./note-form";
 import { ResendButton } from "./resend-button";
+import { PricingPanel } from "./pricing-panel";
+import type { PriceTier } from "@/lib/types";
 
 export const metadata = { title: "Order | Char'd Pizza" };
 
@@ -33,11 +35,12 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
   const settings = settingsRow as Settings;
   const tz = settings.time_zone;
 
-  const [{ data: notes }, { data: payments }, { data: history }, { data: notifications }] = await Promise.all([
+  const [{ data: notes }, { data: payments }, { data: history }, { data: notifications }, { data: tiers }] = await Promise.all([
     supabase.from("order_notes").select("id, body, is_customer_facing, created_at, admin_users(display_name)").eq("order_id", id).order("created_at", { ascending: false }),
     supabase.from("payments").select("id, kind, method, amount_cents, status, note, recorded_at, admin_users(display_name)").eq("order_id", id).order("recorded_at"),
     supabase.from("order_status_history").select("id, from_status, to_status, changed_at, note, admin_users(display_name)").eq("order_id", id).order("changed_at"),
     supabase.from("notifications").select("id, channel, template_key, status, sent_at, created_at, error").eq("order_id", id).order("created_at"),
+    supabase.from("price_tiers").select("*").eq("is_active", true).order("sort_order"),
   ]);
 
   const paidTotal = ((payments ?? []) as unknown as Payment[]).reduce((a, p) => (p.status === "failed" ? a : a + (p.kind === "payment" ? p.amount_cents : -p.amount_cents)), 0);
@@ -100,6 +103,8 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
               )}
             </div>
           </section>
+
+          <PricingPanel order={o} tiers={(tiers ?? []) as PriceTier[]} />
 
           <section className="card space-y-2">
             <h2 className="font-bold">Totals</h2>

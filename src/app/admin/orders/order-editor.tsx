@@ -9,12 +9,13 @@ import { fmtTime } from "@/lib/time";
 import { Switch } from "@/components/ui/switch";
 import { createManualOrder, reviseOrder } from "./admin-order-actions";
 import { lookupCustomers, type CustomerHit } from "../customers/actions";
+import type { PriceTier } from "@/lib/types";
 
 /**
  * One editor for both "new manual order" and "edit existing order".
  * Same rules as the public flow, plus an explicit capacity override switch.
  */
-export function OrderEditor({ data, order }: { data: OrderingData; order?: Order }) {
+export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; order?: Order; tiers?: PriceTier[] }) {
   const router = useRouter();
   const tz = data.settings.time_zone;
   const s = data.service;
@@ -39,6 +40,7 @@ export function OrderEditor({ data, order }: { data: OrderingData; order?: Order
   const [payment, setPayment] = useState<"cash" | "zelle" | "card">(order?.payment_method ?? (s.cash_enabled ? "cash" : "zelle"));
   const [source, setSource] = useState<"phone" | "text" | "whatsapp" | "in_person" | "manual">("in_person");
   const [markPaid, setMarkPaid] = useState(false);
+  const [tierId, setTierId] = useState<string>("");
   const [override, setOverride] = useState(false);
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,9 @@ export function OrderEditor({ data, order }: { data: OrderingData; order?: Order
   const byId = useMemo(() => new Map(data.items.map((i) => [i.smi_id, i])), [data.items]);
   const lines = Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => ({ item: byId.get(id)!, qty: q })).filter((l) => l.item);
   const units = lines.reduce((a, l) => a + l.item.capacity_units * l.qty, 0);
-  const subtotal = lines.reduce((a, l) => a + l.item.price_cents * l.qty, 0);
+  const tier = tiers.find((t) => t.id === tierId) ?? null;
+  const priceOf = (item: (typeof lines)[number]["item"]) => (tier && item.capacity_units > 0 ? tier.pie_price_cents : item.price_cents);
+  const subtotal = lines.reduce((a, l) => a + priceOf(l.item) * l.qty, 0);
   const zone = data.zones.find((z) => z.id === zoneId) ?? null;
   const total = subtotal + (fulfillment === "delivery" && zone ? zone.fee_cents : 0);
 
@@ -87,7 +91,7 @@ export function OrderEditor({ data, order }: { data: OrderingData; order?: Order
     startTransition(async () => {
       const r = editing
         ? await reviseOrder({ ...payload, order_id: order!.id })
-        : await createManualOrder({ ...payload, service_id: s.id, source, mark_paid: markPaid });
+        : await createManualOrder({ ...payload, service_id: s.id, source, mark_paid: markPaid, price_tier_id: tierId || null });
       if (r && "error" in r) {
         setError(r.error ?? "Something went wrong.");
         if (r.code === "SLOT_FULL" || r.code === "SOLD_OUT") router.refresh();
@@ -224,6 +228,19 @@ export function OrderEditor({ data, order }: { data: OrderingData; order?: Order
               </button>
             ))}
           </div>
+          {!editing && tiers.length > 0 && (
+            <label className="block">
+              <span className="label">Pricing</span>
+              <select value={tierId} onChange={(e) => setTierId(e.target.value)} className="input">
+                <option value="">Regular price</option>
+                {tiers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} · {formatCents(t.pie_price_cents)} per pie
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {!editing && (
             <>
               <div className="flex items-center justify-between gap-3 py-1">

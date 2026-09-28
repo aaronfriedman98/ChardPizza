@@ -196,3 +196,11 @@ export interface AccountTransaction {
   created_by: string | null;
   created_at: string;
 }
+
+export interface PriceTier {
+  id: string;
+  name: string;
+  pie_price_cents: number;
+  is_active: boolean;
+  sort_order: number;
+}

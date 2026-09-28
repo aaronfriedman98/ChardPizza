@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { pickOpsService } from "@/lib/ops";
 import { getOrderingData } from "@/lib/public";
 import { OrderEditor } from "../order-editor";
+import type { PriceTier } from "@/lib/types";
 
 export const metadata = { title: "New order | Char'd Pizza" };
 
@@ -10,7 +11,7 @@ export default async function NewOrderPage({ searchParams }: PageProps<"/admin/o
   const { service: sid } = await searchParams;
   const { supabase } = await requireAdmin();
   const { service, candidates } = await pickOpsService(supabase, typeof sid === "string" ? sid : undefined);
-  const data = service ? await getOrderingData(service.id) : null;
+  const [data, { data: tiers }] = await Promise.all([service ? getOrderingData(service.id) : Promise.resolve(null), supabase.from("price_tiers").select("*").eq("is_active", true).order("sort_order")]);
 
   return (
     <div className="space-y-5">
@@ -42,7 +43,7 @@ export default async function NewOrderPage({ searchParams }: PageProps<"/admin/o
           <div className="text-sm text-ink/60">
             Taking an order for <b>{service.name}</b> · {service.service_date}
           </div>
-          <OrderEditor data={data} />
+          <OrderEditor data={data} tiers={(tiers ?? []) as PriceTier[]} />
         </>
       )}
     </div>

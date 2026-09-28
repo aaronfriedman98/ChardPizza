@@ -41,6 +41,7 @@ const createSchema = baseSchema.extend({
   service_id: z.string().uuid(),
   source: z.enum(["phone", "text", "whatsapp", "in_person", "manual"]).default("manual"),
   mark_paid: z.boolean().optional().default(false),
+  price_tier_id: z.string().uuid().nullable().optional(),
 });
 
 const reviseSchema = baseSchema.extend({ order_id: z.string().uuid() });
@@ -85,6 +86,11 @@ export async function createManualOrder(raw: CreateManualOrderInput): Promise<Re
   });
   if (error) return mapError(error.message);
   const result = data as { id: string; order_number: string };
+
+  if (v.price_tier_id) {
+    const { error: pErr } = await db.rpc("apply_order_pricing", { payload: { order_id: result.id, admin_id: admin.id, tier_id: v.price_tier_id, override_cents: null, note: "" } });
+    if (pErr) console.error("apply_order_pricing failed:", pErr.message);
+  }
 
   if (v.mark_paid) {
     const { data: o } = await supabase.from("orders").select("total_cents").eq("id", result.id).single();
@@ -137,6 +143,11 @@ export async function reviseOrder(raw: ReviseOrderInput): Promise<Result | void>
     },
   });
   if (error) return mapError(error.message);
+  // Keep any special pricing the order had.
+  const { data: after } = await db.from("orders").select("price_tier_id, pie_price_override_cents, pricing_note").eq("id", v.order_id).single();
+  if (after && (after.price_tier_id || after.pie_price_override_cents != null)) {
+    await db.rpc("apply_order_pricing", { payload: { order_id: v.order_id, admin_id: admin.id, tier_id: after.price_tier_id, override_cents: after.pie_price_override_cents, note: after.pricing_note ?? "" } });
+  }
   touch();
   revalidatePath(`/admin/orders/${v.order_id}`);
   redirect(`/admin/orders/${v.order_id}`);

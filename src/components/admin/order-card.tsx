@@ -94,6 +94,7 @@ export function OrderCard({
               {paid ? "PAID" : PAY_LABEL[o.payment_status]} · {o.payment_method}
             </Badge>
             <Badge tone={o.status === "ready" ? "green" : o.status === "making" ? "ember" : "gray"}>{STATUS_LABEL[o.status]}</Badge>
+            {(o.price_tier_id || o.pie_price_override_cents != null) && <Badge tone="blue">SPECIAL PRICE</Badge>}
             {o.is_rush && <Badge tone="red">MAKE NOW</Badge>}
             {o.is_on_hold && <Badge tone="gray">ON HOLD</Badge>}
             {o.customer_arrived && !done && <Badge tone="blue">HERE</Badge>}
