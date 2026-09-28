@@ -5,7 +5,8 @@ import type { Settings } from "@/lib/types";
 import { type Order, STATUS_LABEL, PAY_LABEL, itemSummary, tallyItems } from "@/lib/orders";
 import { formatCents, formatPhone } from "@/lib/format";
 import { fmtDate, fmtDateTime } from "@/lib/time";
-import { CustomerForm, MergeForm } from "../customer-forms";
+import { CustomerForm, MergeForm, TierPicker } from "../customer-forms";
+import type { PriceTier } from "@/lib/types";
 
 export const metadata = { title: "Customer | Char'd Pizza" };
 
@@ -19,13 +20,14 @@ type Customer = {
   lifetime_spend_cents: number;
   first_order_at: string | null;
   last_order_at: string | null;
+  default_price_tier_id: string | null;
 };
 type Address = { id: string; line1: string; line2: string | null; city: string | null; notes: string | null; delivery_zones: { name: string } | null };
 
 export default async function CustomerPage({ params }: PageProps<"/admin/customers/[id]">) {
   const { id } = await params;
   const { supabase } = await requireAdmin();
-  const [{ data: c }, { data: settingsRow }, { data: ordersData }, { data: addresses }] = await Promise.all([
+  const [{ data: c }, { data: settingsRow }, { data: ordersData }, { data: addresses }, { data: tiers }] = await Promise.all([
     supabase.from("customers").select("*").eq("id", id).maybeSingle(),
     supabase.from("settings").select("time_zone").eq("id", true).single(),
     supabase
@@ -34,6 +36,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
       .eq("customer_id", id)
       .order("created_at", { ascending: false }),
     supabase.from("customer_addresses").select("id, line1, line2, city, notes, delivery_zones(name)").eq("customer_id", id),
+    supabase.from("price_tiers").select("*").eq("is_active", true).order("sort_order"),
   ]);
   if (!c) notFound();
   const customer = c as Customer;
@@ -114,6 +117,7 @@ export default async function CustomerPage({ params }: PageProps<"/admin/custome
         </div>
 
         <div className="space-y-5">
+          <TierPicker customerId={customer.id} current={customer.default_price_tier_id} tiers={(tiers ?? []) as PriceTier[]} />
           <CustomerForm customer={customer} />
           <MergeForm customerId={customer.id} customerName={customer.full_name} />
         </div>

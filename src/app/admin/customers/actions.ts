@@ -85,3 +85,12 @@ export async function mergeCustomers(intoId: string, fromId: string): Promise<Re
   revalidatePath(`/admin/customers/${intoId}`);
   return { ok: `Merged ${from.full_name} into ${into.full_name}.` };
 }
+
+export async function setCustomerTier(customerId: string, tierId: string | null): Promise<Result> {
+  const { supabase, admin } = await requireAdmin();
+  const { error } = await supabase.from("customers").update({ default_price_tier_id: tierId }).eq("id", customerId);
+  if (error) return { error: error.message };
+  await audit(supabase, admin.id, "customer.default_tier", "customer", customerId, { tier_id: tierId });
+  revalidatePath(`/admin/customers/${customerId}`);
+  return { ok: "Saved." };
+}

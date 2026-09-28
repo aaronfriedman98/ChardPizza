@@ -3,7 +3,9 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { formatPhone } from "@/lib/format";
 import { FormMessage, SubmitButton } from "@/components/ui/form-status";
-import { lookupCustomers, mergeCustomers, updateCustomer, type CustomerHit } from "./actions";
+import { lookupCustomers, mergeCustomers, setCustomerTier, updateCustomer, type CustomerHit } from "./actions";
+import type { PriceTier } from "@/lib/types";
+import { formatCents } from "@/lib/format";
 
 export function CustomerForm({ customer }: { customer: { id: string; full_name: string; phone: string; email: string | null; notes: string | null } }) {
   const [state, action] = useActionState(updateCustomer.bind(null, customer.id), undefined);
@@ -81,6 +83,37 @@ export function MergeForm({ customerId, customerName }: { customerId: string; cu
         </ul>
       )}
       <FormMessage state={msg ?? undefined} />
+    </section>
+  );
+}
+
+export function TierPicker({ customerId, current, tiers }: { customerId: string; current: string | null; tiers: PriceTier[] }) {
+  const [pending, startTransition] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <section className="card space-y-2">
+      <h2 className="font-bold">Pricing for this customer</h2>
+      <p className="text-xs text-ink/60">Applied automatically to every order they place, online or by hand. They still see the regular price on the website until the confirmation.</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          disabled={pending}
+          onClick={() => startTransition(async () => setMsg((await setCustomerTier(customerId, null)).ok ?? null))}
+          className={`rounded-full px-3 py-1.5 text-sm font-medium ${!current ? "bg-char text-white" : "border border-line hover:bg-cream"}`}
+        >
+          Regular
+        </button>
+        {tiers.map((t) => (
+          <button
+            key={t.id}
+            disabled={pending}
+            onClick={() => startTransition(async () => setMsg((await setCustomerTier(customerId, t.id)).ok ?? null))}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium ${current === t.id ? "bg-char text-white" : "border border-line hover:bg-cream"}`}
+          >
+            {t.name} · {formatCents(t.pie_price_cents)}/pie
+          </button>
+        ))}
+      </div>
+      {msg && <p className="text-xs text-ink/60">{msg}</p>}
     </section>
   );
 }
