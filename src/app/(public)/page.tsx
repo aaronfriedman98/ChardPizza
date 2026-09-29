@@ -46,7 +46,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {/* Top bar: floats over the oven, turns solid walnut on scroll. */}
       <header className="site-header">
-        <div className="site-header-inner mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-5 py-4 sm:px-8 sm:py-5">
+        <div className="site-header-inner mx-auto flex max-w-7xl items-center justify-between sm:grid sm:grid-cols-[1fr_auto_1fr] px-5 py-4 sm:px-8 sm:py-5">
           <nav className="hidden items-center gap-7 text-[12px] font-bold uppercase tracking-[0.2em] text-flour/85 sm:flex">
             <a href="#sale" className="nav-link hover:text-gold2">This week</a>
             <a href="#how" className="nav-link hover:text-gold2">How it works</a>
@@ -56,7 +56,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               </a>
             )}
           </nav>
-          <Link href="/" className="header-mark col-start-2 flex items-center gap-3">
+          <Link href="/" className="header-mark flex items-center gap-3 sm:col-start-2">
             <LogoMark size={46} />
             <Wordmark className="text-[30px] sm:text-[34px]" />
           </Link>

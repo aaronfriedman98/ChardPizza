@@ -20,7 +20,8 @@
 }
 .site-header-inner { transition: padding 0.3s ease; }
 [data-scrolled="true"] .site-header-inner { padding-top: 10px; padding-bottom: 10px; }
-.header-mark { transition: transform 0.3s ease; transform-origin: center; }
+.header-mark { transition: transform 0.3s ease; transform-origin: left center; }
+@media (min-width: 40rem) { .header-mark { transform-origin: center; } }
 [data-scrolled="true"] .header-mark { transform: scale(0.82); }
 
 /* Read-progress line at the very top, ember coloured. */
