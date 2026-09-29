@@ -138,7 +138,7 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
 
       <Section
         title="Share message"
-        hint="The WhatsApp announcement for a service. Placeholders: {{service_name}} {{day}} {{date}} {{start}} {{end}} {{menu}} {{order_url}} {{delivery_line}} {{payment_line}} {{opens_line}}"
+        hint="The WhatsApp announcement for a service. Placeholders: {{service_name}} {{day}} {{date}} {{start}} {{end}} {{when_line}} {{slots_line}} {{menu}} {{order_url}} {{delivery_line}} {{payment_line}} {{opens_line}}"
       >
         <textarea name="share_message_template" defaultValue={s.share_message_template} rows={8} className="input font-mono text-sm" />
       </Section>

@@ -6,21 +6,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { logoMarkSvgString } from "@/components/brand/logo";
 import type { DeliveryZone, MenuItem, Service, ServiceMenuItem, Settings } from "@/lib/types";
-import { formatCents } from "@/lib/format";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 import { orderUrl } from "@/lib/share";
+import { FLYER, brush, distress, grunge, paper, uri } from "@/lib/flyer-art";
 
 export const runtime = "nodejs";
 
 const W = 1080;
 const H = 1350;
-const WOOD = "#160f0b";
-const WOOD2 = "#241812";
-const FLOUR = "#f1e6d2";
-const FLOUR2 = "#cdbfa6";
-const GOLD = "#c9a25c";
-const GOLD2 = "#e3c783";
-const LINE = "rgba(201,162,92,0.35)";
+const { CHAR, AMBER, CREAM, CREAM2, BRICK, INK } = FLYER;
+const PIE_CAP = 3;
+const SIDE_CAP = 4;
 
 async function font(file: string) {
   const buf = await readFile(path.join(process.cwd(), "src", "assets", "fonts", file));
@@ -36,13 +32,32 @@ async function posterDataUri() {
   }
 }
 
+const money = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
+const caps = (s: string) => s.toUpperCase().replace(/'/g, "’");
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n).replace(/[\s,.;]+\S*$/, "")}…` : s);
+
+/** "7–10 PM", "7:30–10 PM", "11 AM–2 PM". */
+function hoursRange(startIso: string, endIso: string, tz: string) {
+  const a = fmtTime(startIso, tz).replace(":00", "");
+  const b = fmtTime(endIso, tz).replace(":00", "");
+  const [aT, aM] = a.split(" ");
+  const [, bM] = b.split(" ");
+  return `${aM === bM ? aT : a}–${b}`;
+}
+
 export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const { id } = await ctx.params;
   const db = createAdminClient();
   const [{ data: serviceRow }, { data: settingsRow }, { data: smi }, { data: sz }] = await Promise.all([
     db.from("services").select("*").eq("id", id).maybeSingle(),
     db.from("settings").select("*").eq("id", true).single(),
-    db.from("service_menu_items").select("*, menu_items(name, description)").eq("service_id", id).eq("is_available", true).eq("sold_out_manual", false).order("sort_order"),
+    db
+      .from("service_menu_items")
+      .select("*, menu_items(name, description, capacity_units)")
+      .eq("service_id", id)
+      .eq("is_available", true)
+      .eq("sold_out_manual", false)
+      .order("sort_order"),
     db.from("service_delivery_zones").select("delivery_zones(name)").eq("service_id", id),
   ]);
   if (!serviceRow) return new Response("Not found", { status: 404 });
@@ -57,108 +72,132 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
 
   const settings = settingsRow as Settings;
   const tz = settings.time_zone;
-  const items = ((smi ?? []) as (ServiceMenuItem & { menu_items: Pick<MenuItem, "name" | "description"> })[]).map((r) => ({
+  const rows = (smi ?? []) as (ServiceMenuItem & { menu_items: Pick<MenuItem, "name" | "description" | "capacity_units"> })[];
+  const all = rows.map((r) => ({
     name: r.menu_items.name,
     description: r.description_override ?? r.menu_items.description ?? "",
-    price: formatCents(r.price_cents),
+    price_cents: r.price_cents,
+    isPie: Number(r.menu_items.capacity_units) > 0,
   }));
+  const pies = all.filter((i) => i.isPie);
+  const sides = all.filter((i) => !i.isPie);
+  const shown = pies.slice(0, PIE_CAP);
+  const more = pies.length - shown.length;
+  const uniform = pies.length > 0 && new Set(pies.map((p) => p.price_cents)).size === 1 ? `${money(pies[0].price_cents)} A PIE` : null;
+  const tight = shown.length >= 3 || sides.length > 0 || more > 0;
+
   const zones = ((sz ?? []) as unknown as { delivery_zones: Pick<DeliveryZone, "name"> }[]).map((z) => z.delivery_zones.name);
   const url = orderUrl(settings, "flyer");
   const shortUrl = settings.public_url.replace(/^https?:\/\//, "").replace(/\/+$/, "");
-  const payments = [s.cash_enabled && "Cash", s.zelle_enabled && "Zelle", s.card_enabled && "Card"].filter(Boolean).join(" · ");
-  const footerLine = [s.pickup_enabled ? "Pickup" : "", s.delivery_enabled ? `Delivery to ${zones.join(" & ")}` : "", payments].filter(Boolean).join("   ·   ");
+  const payments = [s.cash_enabled && "Cash", s.zelle_enabled && "Zelle", s.card_enabled && "Card"].filter(Boolean).join(" or ");
+  const zoneText = zones.join(" & ");
+  const how =
+    s.pickup_enabled && s.delivery_enabled
+      ? `Pickup or delivery${zoneText ? ` to ${zoneText}` : ""}`
+      : s.delivery_enabled
+        ? `Delivery only${zoneText ? ` · ${zoneText}` : ""}`
+        : "Pickup only";
+  const footerLine = [how, payments].filter(Boolean).join("  ·  ");
 
-  const [cormorant, cormorantItalic, inter, interBold, qr, poster, brand] = await Promise.all([
-    font("BodoniModa-SemiBold.ttf"),
-    font("BodoniModa-SemiBoldItalic.ttf"),
+  const [anton, karla, karlaBold, qr, poster] = await Promise.all([
+    font("Anton-Regular.ttf"),
     font("Karla-Regular.ttf"),
     font("Karla-Bold.ttf"),
-    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: "#160f0b", light: "#e3c783" } }),
+    QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: INK, light: AMBER } }),
     posterDataUri(),
-    font("Anton-Regular.ttf"),
   ]);
-  const logo = `data:image/svg+xml;utf8,${encodeURIComponent(logoMarkSvgString(120))}`;
-  const day = fmtDateOnly(s.service_date, "EEEE");
-  const menuFont = items.length > 3 ? 40 : 50;
+  const day = fmtDateOnly(s.service_date, "EEEE").toUpperCase();
+  const dateLine = `${fmtDateOnly(s.service_date, "MMM d").toUpperCase()}  ·  ${hoursRange(s.starts_at, s.ends_at, tz)}`;
+  const dayFs = Math.min(tight ? 170 : 200, Math.floor(1560 / Math.max(day.length, 6)));
+  const pizzaFs = tight ? 230 : 270;
+  const label = { fontSize: 18, fontWeight: 700, letterSpacing: 6, color: AMBER } as const;
 
   return new ImageResponse(
     (
-      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", backgroundColor: WOOD, color: FLOUR, fontFamily: "Karla", position: "relative" }}>
-        {/* oven glow behind the top */}
+      <div style={{ width: W, height: H, display: "flex", flexDirection: "column", backgroundColor: CHAR, color: CREAM, fontFamily: "Karla", position: "relative" }}>
         {poster && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={poster} width={W} height={640} alt="" style={{ position: "absolute", top: 0, left: 0, width: W, height: 640, objectFit: "cover", objectPosition: "center 60%", opacity: 0.85 }} />
+          <img src={poster} width={W} height={700} alt="" style={{ position: "absolute", top: 0, left: 0, width: W, height: 700, objectFit: "cover", objectPosition: "70% 55%", opacity: 0.8 }} />
         )}
-        <div style={{ position: "absolute", top: 0, left: 0, width: W, height: 640, background: "linear-gradient(180deg, rgba(22,15,11,0.55) 0%, rgba(22,15,11,0.15) 40%, rgba(22,15,11,0.85) 80%, #160f0b 100%)" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, width: W, height: 700, backgroundImage: `linear-gradient(180deg, rgba(20,17,16,0.7) 0%, rgba(20,17,16,0.05) 30%, rgba(20,17,16,0.6) 70%, ${CHAR} 100%)` }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={grunge(W, H)} width={W} height={H} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
 
         {/* header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "48px 64px 0 64px" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "52px 64px 0 64px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} width={96} height={67} alt="" />
-          <div style={{ fontFamily: "Brand", fontSize: 58, color: FLOUR, letterSpacing: 2, marginTop: 6 }}>{"CHAR'D"}</div>
-          <div style={{ marginLeft: "auto", fontSize: 18, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>Wood-fired · Southfield</div>
+          <img src={uri(logoMarkSvgString(78, BRICK))} width={78} height={55} alt="" />
+          <div style={{ fontFamily: "Anton", fontSize: 44, marginLeft: 14, marginTop: 6, letterSpacing: 1 }}>{"CHAR’D"}</div>
+          <div style={{ marginLeft: "auto", fontSize: 17, fontWeight: 700, letterSpacing: 6, color: AMBER }}>WOOD-FIRED · SOUTHFIELD</div>
         </div>
 
-        {/* headline */}
-        <div style={{ display: "flex", flexDirection: "column", padding: "150px 64px 0 64px" }}>
-          <div style={{ fontSize: 20, letterSpacing: 8, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>{`${day} sale`}</div>
-          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 108, lineHeight: 0.98, color: FLOUR, marginTop: 14 }}>
-            <span>Thin, crispy,&nbsp;</span>
-          </div>
-          <div style={{ display: "flex", fontFamily: "Cormorant", fontSize: 108, lineHeight: 0.98, color: FLOUR }}>
-            <span>and&nbsp;</span>
-            <span style={{ fontFamily: "CormorantItalic" }}>Char’d.</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 30, fontSize: 32, color: FLOUR2 }}>
-            <span style={{ color: FLOUR, fontWeight: 700 }}>{fmtDateOnly(s.service_date, "MMMM d")}</span>
-            <span style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: GOLD }} />
-            <span>{`${fmtTime(s.starts_at, tz)} – ${fmtTime(s.ends_at, tz)}`}</span>
-          </div>
+        {/* stamped headline */}
+        <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: `${tight ? 36 : 64}px 58px 0 58px` }}>
+          <div style={{ fontFamily: "Anton", fontSize: dayFs, lineHeight: 0.9, color: AMBER, letterSpacing: 2 }}>{day}</div>
+          <div style={{ fontFamily: "Anton", fontSize: pizzaFs, lineHeight: 0.86, color: CREAM, letterSpacing: 4, marginTop: 4 }}>PIZZA</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={distress(W, 520, CHAR, 7, 1.4)} width={W} height={520} alt="" style={{ position: "absolute", top: 40, left: 0 }} />
         </div>
 
-        {/* gold rule */}
-        <div style={{ margin: "44px 64px 0 64px", height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+        {/* date on a brush stroke */}
+        <div style={{ display: "flex", position: "relative", width: 640, height: 92, marginLeft: 44, marginTop: 18, transform: "rotate(-2deg)", alignItems: "center", justifyContent: "center" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={brush(640, 92, AMBER)} width={640} height={92} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
+          <div style={{ fontFamily: "Anton", fontSize: 50, color: INK, letterSpacing: 3 }}>{dateLine}</div>
+        </div>
 
         {/* menu */}
-        <div style={{ display: "flex", flexDirection: "column", padding: "26px 64px 0 64px" }}>
-          <div style={{ fontSize: 16, letterSpacing: 6, color: GOLD, textTransform: "uppercase", fontWeight: 700 }}>Tonight’s menu</div>
-          {items.slice(0, 4).map((it, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", paddingTop: 20, paddingBottom: 16, borderBottom: `1px solid ${LINE}` }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
-                <div style={{ fontFamily: "Cormorant", fontSize: menuFont, color: FLOUR }}>{it.name}</div>
-                <div style={{ flex: 1, borderBottom: `1px dashed rgba(201,162,92,0.5)`, marginBottom: 10 }} />
-                <div style={{ fontFamily: "Cormorant", fontSize: menuFont, color: GOLD2 }}>{it.price}</div>
+        <div style={{ display: "flex", flexDirection: "column", padding: "40px 64px 0 64px" }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={label}>THE PIES</div>
+            <div style={{ flex: 1, height: 2, backgroundColor: BRICK, margin: "0 20px", opacity: 0.8 }} />
+            {uniform && <div style={{ ...label, color: CREAM }}>{uniform}</div>}
+          </div>
+          {shown.map((p, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", marginTop: tight ? 18 : 26 }}>
+              <div style={{ display: "flex", alignItems: "baseline" }}>
+                <div style={{ fontFamily: "Anton", fontSize: tight ? 46 : 56, letterSpacing: 1.5, lineHeight: 1 }}>{caps(p.name)}</div>
+                {!uniform && <div style={{ marginLeft: "auto", fontFamily: "Anton", fontSize: tight ? 40 : 48, color: AMBER }}>{money(p.price_cents)}</div>}
               </div>
-              {it.description && <div style={{ fontSize: 22, lineHeight: 1.35, marginTop: 4, color: FLOUR2, maxWidth: 860 }}>{it.description}</div>}
+              {p.description && (
+                <div style={{ fontSize: tight ? 20 : 23, lineHeight: 1.35, color: CREAM2, marginTop: 6, maxWidth: 900 }}>{tight ? clip(p.description, 88) : p.description}</div>
+              )}
             </div>
           ))}
+          {more > 0 && <div style={{ ...label, fontSize: 19, letterSpacing: 5, marginTop: 18 }}>{`+ ${more} MORE ${more === 1 ? "PIE" : "PIES"} ON THE MENU`}</div>}
+          {sides.length > 0 && (
+            <div style={{ display: "flex", alignItems: "baseline", marginTop: 18 }}>
+              <div style={{ ...label, marginRight: 18 }}>ON THE SIDE</div>
+              <div style={{ fontSize: 23, color: CREAM }}>{sides.slice(0, SIDE_CAP).map((x) => x.name).join("  ·  ") + (sides.length > SIDE_CAP ? "  & more" : "")}</div>
+            </div>
+          )}
         </div>
 
-        {/* footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", padding: "0 64px 56px 64px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: GOLD, color: WOOD, fontSize: 22, letterSpacing: 6, textTransform: "uppercase", fontWeight: 700, padding: "20px 40px" }}>
-              {`Order at ${shortUrl}`}
+        {/* torn amber order strip */}
+        <div style={{ display: "flex", position: "relative", marginTop: "auto", height: 244 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={paper(W, 244, AMBER, { t: true }, 31)} width={W} height={244} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
+          <div style={{ display: "flex", flex: 1, alignItems: "center", padding: "26px 64px 0 64px" }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ fontFamily: "Anton", fontSize: 92, lineHeight: 0.95, color: INK, letterSpacing: 2 }}>ORDER NOW</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: INK, marginTop: 8 }}>{shortUrl}</div>
+              <div style={{ fontSize: 20, color: INK, opacity: 0.75, marginTop: 8 }}>{footerLine}</div>
             </div>
-            <div style={{ fontSize: 22, color: FLOUR2 }}>{footerLine}</div>
-          </div>
-          <div style={{ display: "flex", padding: 10, backgroundColor: GOLD2, border: `1px solid ${GOLD}` }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qr} width={190} height={190} alt="" />
+            <div style={{ display: "flex", marginLeft: "auto", padding: 10, backgroundColor: INK, transform: "rotate(2deg)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qr} width={170} height={170} alt="" />
+            </div>
           </div>
         </div>
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 10, backgroundColor: WOOD2, borderTop: `1px solid ${GOLD}` }} />
       </div>
     ),
     {
       width: W,
       height: H,
       fonts: [
-        { name: "Cormorant", data: cormorant, weight: 600, style: "normal" },
-        { name: "CormorantItalic", data: cormorantItalic, weight: 600, style: "italic" },
-        { name: "Brand", data: brand, weight: 400, style: "normal" },
-        { name: "Karla", data: inter, weight: 400, style: "normal" },
-        { name: "Karla", data: interBold, weight: 700, style: "normal" },
+        { name: "Anton", data: anton, weight: 400, style: "normal" },
+        { name: "Karla", data: karla, weight: 400, style: "normal" },
+        { name: "Karla", data: karlaBold, weight: 700, style: "normal" },
       ],
       headers: { "Cache-Control": "no-store", "Content-Disposition": 'inline; filename="chard-pizza-flyer.png"' },
     },
