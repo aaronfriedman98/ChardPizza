@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, ServiceWaste, Settings } from "@/lib/types";
 import { type Order, queueSort, minutesBehind, firstName } from "@/lib/orders";
 import { fmtTime } from "@/lib/time";
@@ -42,7 +43,7 @@ export function KitchenView({
 }) {
   const tz = settings.time_zone;
   const [now, setNow] = useState(() => new Date());
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
   const [lostOpen, setLostOpen] = useState(false);
   useEffect(() => {
@@ -166,7 +167,7 @@ function LostPieForm({ serviceId, pieTypes, onDone }: { serviceId: string; pieTy
   const [units, setUnits] = useState(1);
   const [reason, setReason] = useState<ServiceWaste["reason"]>("burnt");
   const [note, setNote] = useState("");
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (

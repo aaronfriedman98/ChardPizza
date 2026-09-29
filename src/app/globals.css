@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./home-motion.css";
+@import "./admin-motion.css";
 
 /* Brand tokens.
    Admin (light): cream / ink / ember / line.

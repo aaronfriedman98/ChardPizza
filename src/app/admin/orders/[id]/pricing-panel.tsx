@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { PriceTier } from "@/lib/types";
 import type { Order } from "@/lib/orders";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
@@ -11,7 +12,7 @@ export function PricingPanel({ order: o, tiers }: { order: Order; tiers: PriceTi
   const [custom, setCustom] = useState(o.pie_price_override_cents != null ? centsToDollarsInput(o.pie_price_override_cents) : "");
   const [note, setNote] = useState(o.pricing_note ?? "");
   const [msg, setMsg] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const done = o.status === "completed" || o.status === "cancelled";
   const pieCount = o.order_items.filter((it) => Number(it.capacity_units_each) > 0).reduce((a, it) => a + it.quantity, 0);
   const currentTier = tiers.find((t) => t.id === o.price_tier_id);

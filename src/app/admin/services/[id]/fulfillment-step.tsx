@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { DeliveryZone, Service, ServiceDeliveryZone } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +19,7 @@ export function FulfillmentStep({ service: s, zones, serviceZones }: { service: 
     }
     return m;
   });
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
 
   function save() {

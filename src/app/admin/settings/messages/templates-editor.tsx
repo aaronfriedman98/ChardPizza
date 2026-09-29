@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { MessageTemplate } from "@/lib/messages";
 import { Switch } from "@/components/ui/switch";
 import { saveTemplate } from "@/app/admin/orders/message-actions";
@@ -26,7 +27,7 @@ function TemplateRow({ template: t }: { template: MessageTemplate }) {
   const [subject, setSubject] = useState(t.subject ?? "");
   const [active, setActive] = useState(t.is_active);
   const [msg, setMsg] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const dirty = name !== t.name || body !== t.body || subject !== (t.subject ?? "") || active !== t.is_active;
 
   return (

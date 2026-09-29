@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { Service, ServiceAvailability, SlotAvailability } from "@/lib/types";
 import { fmtTime } from "@/lib/time";
 import { saveCapacitySettings, saveSlots } from "../actions";
@@ -19,7 +20,7 @@ export function CapacityStep({
   availability: ServiceAvailability;
   tz: string;
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
 
   // Settings block

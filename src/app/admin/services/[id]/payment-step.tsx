@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { Service, Settings } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { savePayment } from "../actions";
@@ -12,7 +13,7 @@ export function PaymentStep({ service: s, settings }: { service: Service; settin
   const [card, setCard] = useState(s.card_enabled);
   const [special, setSpecial] = useState(s.allow_special_instructions);
   const [instructions, setInstructions] = useState(s.customer_instructions ?? "");
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
 
   function save() {

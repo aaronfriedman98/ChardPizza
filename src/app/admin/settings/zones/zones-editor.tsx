@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useActionState, useEffect, useState } from "react";
 import type { DeliveryZone } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { Switch, SwitchField } from "@/components/ui/switch";
@@ -10,7 +11,7 @@ import { deleteZone, reorderZones, saveZone, setZoneActive } from "../actions";
 
 export function ZonesEditor({ zones }: { zones: DeliveryZone[] }) {
   const [editing, setEditing] = useState<DeliveryZone | "new" | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [message, setMessage] = useState<string | null>(null);
 
   function move(index: number, dir: -1 | 1) {
@@ -84,7 +85,7 @@ export function ZonesEditor({ zones }: { zones: DeliveryZone[] }) {
 
 function ZoneForm({ zone, onDone, onError }: { zone: DeliveryZone | null; onDone: () => void; onError: (m: string) => void }) {
   const [state, action] = useActionState(saveZone, undefined);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   useEffect(() => {
     if (state?.ok) onDone();

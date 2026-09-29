@@ -8,6 +8,7 @@ import { formatCents, formatPhone } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { markPaid, markUnpaid, movePriority, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
 import { QuickSend } from "@/components/admin/quick-send";
+import { Spinner, beginBusy, endBusy, toast } from "@/components/admin/feedback";
 
 type Thresholds = Settings;
 
@@ -28,6 +29,8 @@ export function OrderCard({
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmPickup, setConfirmPickup] = useState(false);
+  // Which button on this card was tapped, so only that one shows the spinner.
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const u = urgency(o, now, thresholds);
   const behind = minutesBehind(o, now);
   const ready = minutesReady(o, now);
@@ -35,9 +38,20 @@ export function OrderCard({
   const done = o.status === "completed" || o.status === "cancelled";
 
   function run(fn: () => Promise<{ error?: string }>) {
+    beginBusy();
     startTransition(async () => {
-      const r = await fn();
-      if (r.error) onError?.(r.error);
+      try {
+        const r = await fn();
+        if (r.error) {
+          onError?.(r.error);
+          toast(r.error, "error");
+        }
+      } catch {
+        toast("That didn't go through. Try again.", "error");
+      } finally {
+        endBusy();
+        setBusyKey(null);
+      }
     });
   }
 
@@ -63,18 +77,27 @@ export function OrderCard({
               ? "border-ember/60"
               : "border-line";
 
-  const Btn = ({ children, onClick, primary, danger }: { children: React.ReactNode; onClick: () => void; primary?: boolean; danger?: boolean }) => (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={onClick}
-      className={`rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-        primary ? "bg-ember text-white hover:bg-ember/90" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
-      }`}
-    >
-      {children}
-    </button>
-  );
+  const Btn = ({ children, onClick, primary, danger }: { children: React.ReactNode; onClick: () => void; primary?: boolean; danger?: boolean }) => {
+    const key = typeof children === "string" ? children : String(children);
+    const mine = pending && busyKey === key;
+    return (
+      <button
+        type="button"
+        disabled={pending}
+        aria-busy={mine}
+        onClick={() => {
+          setBusyKey(key);
+          onClick();
+        }}
+        className={`busy-btn rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60 ${
+          primary ? "bg-ember text-white hover:bg-ember/90" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
+        }`}
+      >
+        <span className="busy-label">{children}</span>
+        {mine && <Spinner className="busy-spinner" />}
+      </button>
+    );
+  };
 
   return (
     <article className={`rounded-2xl border-2 bg-white p-3.5 shadow-sm ${tone} ${o.is_on_hold ? "bg-ink/5" : ""}`}>

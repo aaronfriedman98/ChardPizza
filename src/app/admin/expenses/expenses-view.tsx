@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useMemo, useState } from "react";
 import type { AdminUser, Expense, ExpenseCategory, Service } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { fmtDateOnly } from "@/lib/time";
@@ -32,7 +33,7 @@ export function ExpensesView({
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPaidBy, setFilterPaidBy] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   const catName = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
   const svcName = useMemo(() => new Map(services.map((s) => [s.id, `${s.name} · ${s.service_date}`])), [services]);
@@ -190,7 +191,7 @@ function ExpenseForm({
   });
   const [cats, setCats] = useState(categories);
   const [uploading, setUploading] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
 

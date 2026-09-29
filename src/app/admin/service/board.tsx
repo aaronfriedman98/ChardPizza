@@ -1,8 +1,9 @@
 "use client";
 
+import { useBusyTransition } from "@/components/admin/feedback";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, Settings } from "@/lib/types";
 import { type Order, ACTIVE, minutesBehind, minutesReady, urgency, queueSort } from "@/lib/orders";
 import { formatCents } from "@/lib/format";
@@ -35,7 +36,7 @@ export function ServiceBoard({
   const [group, setGroup] = useState<Group>("slot");
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 15000);

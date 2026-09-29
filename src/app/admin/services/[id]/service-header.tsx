@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { Service, ServiceAvailability } from "@/lib/types";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 import { publicState, STATE_LABEL, STATE_TONE, STATUS_LABEL } from "@/lib/service-state";
@@ -19,7 +20,7 @@ export function ServiceHeader({
   orderCount: number;
   tz: string;
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
   const state = publicState(s, new Date(), Number(availability?.units_remaining ?? Infinity));
   const isPublic = s.status === "scheduled" || s.status === "live";

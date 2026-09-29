@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useActionState, useEffect, useState } from "react";
 import { formatPhone } from "@/lib/format";
 import { FormMessage, SubmitButton } from "@/components/ui/form-status";
 import { lookupCustomers, mergeCustomers, setCustomerTier, updateCustomer, type CustomerHit } from "./actions";
@@ -40,7 +41,7 @@ export function MergeForm({ customerId, customerName }: { customerId: string; cu
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   useEffect(() => {
     if (q.trim().length < 3) {
@@ -88,7 +89,7 @@ export function MergeForm({ customerId, customerName }: { customerId: string; cu
 }
 
 export function TierPicker({ customerId, current, tiers }: { customerId: string; current: string | null; tiers: PriceTier[] }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <section className="card space-y-2">

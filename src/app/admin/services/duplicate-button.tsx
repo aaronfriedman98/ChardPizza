@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+
 import { duplicateService } from "./actions";
 
 export function DuplicateButton({ id, className = "btn-ghost text-sm" }: { id: string; className?: string }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   return (
     <button
       type="button"

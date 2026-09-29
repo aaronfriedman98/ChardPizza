@@ -1,7 +1,8 @@
 "use client";
 
+import { useBusyTransition } from "@/components/admin/feedback";
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import type { AccountTransaction, AdminUser, Service } from "@/lib/types";
 import { formatCents } from "@/lib/format";
 import { fmtDateOnly } from "@/lib/time";
@@ -24,7 +25,7 @@ const KIND_LABEL: Record<AccountTransaction["kind"], string> = {
 export function AccountView({ transactions, partners, services }: { transactions: AccountTransaction[]; partners: Partner[]; services: Svc[] }) {
   const [modal, setModal] = useState<"deposit" | "partner_draw" | "other" | "set" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const partnerName = useMemo(() => new Map(partners.map((p) => [p.id, p.display_name])), [partners]);
   const svcName = useMemo(() => new Map(services.map((s) => [s.id, s.name])), [services]);
 
@@ -146,7 +147,7 @@ function EntryForm({ kind, partners, services, onDone }: { kind: "deposit" | "pa
     partner_id: partners[0]?.id ?? "",
     service_id: "",
   });
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
   const set = (p: Partial<typeof form>) => setForm((f) => ({ ...f, ...p }));
   return (
@@ -216,7 +217,7 @@ function EntryForm({ kind, partners, services, onDone }: { kind: "deposit" | "pa
 function SetBalanceForm({ current, onDone }: { current: number; onDone: () => void }) {
   const [target, setTarget] = useState("");
   const [note, setNote] = useState("");
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
   return (
     <form

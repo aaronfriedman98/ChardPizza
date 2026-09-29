@@ -1,0 +1,116 @@
+/* ---------------------------------------------------------------------------
+   Admin feedback: progress bar, busy buttons, toasts, skeletons.
+   The goal is that nothing ever blanks out — content stays until its
+   replacement is ready, and every click says something immediately.
+   --------------------------------------------------------------------------- */
+
+/* Top progress bar. */
+.admin-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  z-index: 60;
+  background: linear-gradient(90deg, var(--ember), #f2a33a);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 10px rgba(228, 87, 46, 0.5);
+  transition: width 0.22s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+.admin-progress[data-on="true"] { opacity: 1; }
+
+/* Spinner. */
+.spinner { animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.nav-spinner { margin-left: auto; width: 13px; height: 13px; opacity: 0.8; }
+
+/* Buttons that show they are working: the label holds its place and dims,
+   with the spinner centred over it, so the button never changes size. */
+.busy-btn {
+  position: relative;
+  transition: transform 0.12s ease, opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.busy-btn:active:not(:disabled) { transform: scale(0.97); }
+.busy-btn[aria-busy="true"] { cursor: progress; opacity: 1; }
+.busy-btn[aria-busy="true"] .busy-label { opacity: 0.32; }
+.busy-label { transition: opacity 0.18s ease; display: inline-flex; align-items: center; gap: inherit; }
+.busy-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -8px 0 0 -8px;
+}
+/* A quick tick of confirmation when an action lands. */
+.busy-done { animation: flash-ok 0.9s ease-out; }
+@keyframes flash-ok {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
+  100% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+}
+
+/* Anything mid-flight fades slightly rather than disappearing. */
+[aria-busy="true"] { }
+.is-stale { opacity: 0.55; transition: opacity 0.25s ease; pointer-events: none; }
+
+/* New page content fades up instead of snapping in. */
+.page-fade { animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Cards settle in with a small stagger when a list first paints. */
+.card, .order-card { transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease; }
+
+/* Toasts. */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+@media (min-width: 768px) { .toast-stack { bottom: 24px; } }
+.toast {
+  background: var(--char);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 18px;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  max-width: min(92vw, 30rem);
+}
+.toast-error { background: #b91c1c; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Skeletons for route loading states. */
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 25%, #f3ece1 37%, var(--line) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Nav links show where you are going. */
+.nav-link-admin { transition: background-color 0.2s ease, color 0.2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 1.4s; }
+  .page-fade, .toast, .busy-done { animation: none; }
+  .skeleton { animation: none; }
+  .admin-progress { transition: opacity 0.2s ease; }
+}

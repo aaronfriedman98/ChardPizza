@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import { resendConfirmationEmail } from "../message-actions";
 
 export function ResendButton({ orderId, email }: { orderId: string; email: string | null }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<string | null>(null);
   if (!email) return null;
   return (

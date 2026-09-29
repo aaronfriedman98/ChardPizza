@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderingData, PublicSlot } from "@/lib/public";
 import type { Order } from "@/lib/orders";
@@ -44,7 +45,7 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
   const [override, setOverride] = useState(false);
   const [hits, setHits] = useState<CustomerHit[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   const byId = useMemo(() => new Map(data.items.map((i) => [i.smi_id, i])), [data.items]);
   const lines = Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => ({ item: byId.get(id)!, qty: q })).filter((l) => l.item);

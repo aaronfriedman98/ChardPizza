@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import { addNote } from "../actions";
 
 export function NoteForm({ orderId }: { orderId: string }) {
   const [body, setBody] = useState("");
   const [customerFacing, setCustomerFacing] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (

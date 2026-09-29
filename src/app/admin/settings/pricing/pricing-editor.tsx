@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { PriceTier } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +11,7 @@ import { deletePriceTier, savePriceTier } from "@/app/admin/orders/pricing-actio
 export function PricingEditor({ tiers }: { tiers: PriceTier[] }) {
   const [editing, setEditing] = useState<PriceTier | "new" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
 
   return (
     <div className="space-y-4 max-w-2xl">
@@ -56,7 +57,7 @@ function TierForm({ tier, onDone, onError }: { tier: PriceTier | null; onDone: (
   const [price, setPrice] = useState(tier ? centsToDollarsInput(tier.pie_price_cents) : "");
   const [active, setActive] = useState(tier?.is_active ?? true);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   return (
     <form
       className="space-y-3"

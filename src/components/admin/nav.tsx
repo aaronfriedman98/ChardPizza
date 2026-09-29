@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BusyLink } from "@/components/admin/feedback";
 
 export const NAV = [
   { href: "/admin", label: "Dashboard", icon: "◫" },
@@ -36,9 +36,9 @@ export function SideNav() {
       <ul className="flex-1 py-3">
         {NAV.map((item) => (
           <li key={item.href}>
-            <Link
+            <BusyLink
               href={item.href}
-              className={`flex items-center gap-3 px-5 py-2.5 text-sm font-medium transition ${
+              className={`nav-link-admin flex items-center gap-3 px-5 py-2.5 text-sm font-medium ${
                 isActive(pathname, item.href)
                   ? "bg-ember/10 text-ember border-r-2 border-ember"
                   : "text-ink/70 hover:bg-cream hover:text-ink"
@@ -46,7 +46,7 @@ export function SideNav() {
             >
               <span className="w-5 text-center text-base opacity-70">{item.icon}</span>
               {item.label}
-            </Link>
+            </BusyLink>
           </li>
         ))}
       </ul>
@@ -62,15 +62,15 @@ export function BottomNav() {
       <ul className="grid grid-cols-5">
         {items.map((item) => (
           <li key={item.href}>
-            <Link
+            <BusyLink
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+              className={`nav-link-admin relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
                 isActive(pathname, item.href) ? "text-ember" : "text-ink/60"
               }`}
             >
               <span className="text-lg leading-none">{item.icon}</span>
               {item.label === "Service Board" ? "Board" : item.label}
-            </Link>
+            </BusyLink>
           </li>
         ))}
       </ul>

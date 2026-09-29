@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useState } from "react";
 import type { MenuItem, Service, ServiceMenuItem } from "@/lib/types";
 import { centsToDollarsInput } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +34,7 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
         };
       }),
   );
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
   const byId = new Map(library.map((i) => [i.id, i]));
 

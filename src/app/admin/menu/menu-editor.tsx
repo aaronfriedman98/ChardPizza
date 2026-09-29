@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useBusyTransition } from "@/components/admin/feedback";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import type { MenuItem } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { Switch, SwitchField } from "@/components/ui/switch";
@@ -12,7 +13,7 @@ const CATEGORY_SUGGESTIONS = ["Pizza", "Sides", "Soup", "Drinks", "Dessert"];
 
 export function MenuEditor({ items }: { items: MenuItem[] }) {
   const [editing, setEditing] = useState<MenuItem | "new" | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(true);
 
@@ -114,7 +115,7 @@ function ItemForm({
   onError: (m: string) => void;
 }) {
   const [state, action] = useActionState(saveMenuItem, undefined);
-  const [pending, startTransition] = useTransition();
+  const [pending, startTransition] = useBusyTransition();
   const [units, setUnits] = useState<number>(item?.capacity_units ?? 1);
 
   useEffect(() => {
