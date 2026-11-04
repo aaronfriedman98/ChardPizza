@@ -1,6 +1,7 @@
 "use client";
 
 import { useBusyTransition } from "@/components/admin/feedback";
+import Link from "next/link";
 import { useState } from "react";
 import type { MenuItem, Service, ServiceMenuItem } from "@/lib/types";
 import { centsToDollarsInput } from "@/lib/format";
@@ -55,7 +56,10 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
   return (
     <div className="space-y-4 max-w-3xl">
       <p className="text-sm text-ink/60">
-        Tick what is on the menu for this service. Prices start from the library and can be changed for this night only.
+        Tick what is on the menu for this service. Prices start from the library and can be changed for this night only.{" "}
+        <Link href="/admin/menu" className="font-semibold text-ember hover:underline">
+          Add or edit pies →
+        </Link>
       </p>
 
       <div className="card divide-y divide-line p-0">
