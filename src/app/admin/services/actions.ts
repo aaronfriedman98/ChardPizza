@@ -163,6 +163,7 @@ const menuRowsSchema = z.array(
     price: z.string(),
     quantity_limit: z.string(),
     is_available: z.boolean(),
+    is_new: z.boolean().default(false),
     description_override: z.string().nullable(),
   }),
 );
@@ -206,6 +207,7 @@ export async function saveServiceMenu(serviceId: string, rowsInput: unknown): Pr
       price_cents,
       quantity_limit,
       is_available: r.is_available,
+      is_new: r.is_new,
       description_override: r.description_override?.trim() || null,
       sort_order: (sort += 10),
     };
@@ -496,6 +498,7 @@ export async function duplicateService(serviceId: string): Promise<Result> {
         is_available: m.is_available,
         quantity_limit: m.quantity_limit,
         sold_out_manual: false,
+        is_new: false, // new this week isn't new next week
         sort_order: m.sort_order,
       })),
     );

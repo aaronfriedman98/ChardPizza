@@ -222,6 +222,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               {data.items.map((item, i) => (
                 <Reveal as="li" key={item.smi_id} delay={80 * i} className="menu-row flex flex-wrap items-baseline gap-x-4 border-b border-goldline py-6">
                   <span className="font-display text-[32px] font-medium leading-none text-flour sm:text-[36px]">{item.name}</span>
+                  {item.is_new && <span className="new-tag self-center">New</span>}
                   <span className="menu-leader flex-1 -translate-y-2 border-b border-dotted border-gold/45" />
                   <span className={`menu-price font-display text-[28px] leading-none ${item.is_sold_out ? "text-flour2/60 line-through" : "text-gold2"}`}>
                     {item.is_sold_out ? "Sold out" : formatCents(item.price_cents)}

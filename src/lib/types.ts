@@ -110,6 +110,8 @@ export interface ServiceMenuItem {
   is_available: boolean;
   quantity_limit: number | null;
   sold_out_manual: boolean;
+  /** Flagged as a new pie for this sale: badge on site, flyer and WhatsApp message. */
+  is_new: boolean;
   sort_order: number;
 }
 

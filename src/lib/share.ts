@@ -2,7 +2,7 @@ import type { Service, Settings } from "@/lib/types";
 import { formatCents } from "@/lib/format";
 import { fmtDateOnly, fmtDateTime, fmtTime } from "@/lib/time";
 
-export type ShareItem = { name: string; price_cents: number; description: string | null; is_sold_out: boolean; is_pie: boolean };
+export type ShareItem = { name: string; price_cents: number; description: string | null; is_sold_out: boolean; is_pie: boolean; is_new?: boolean };
 export type ShareSlot = { slot_start: string; is_blocked: boolean; units_remaining: number };
 
 export type ShareContext = {
@@ -42,7 +42,7 @@ export function shareVars({ service: s, settings, items, zoneNames, slots, units
   const available = items.filter((i) => !i.is_sold_out);
   const sides = available.filter((i) => !i.is_pie);
   const menu = [
-    ...available.filter((i) => i.is_pie).map((i) => `• ${i.name} — ${formatCents(i.price_cents)}`),
+    ...available.filter((i) => i.is_pie).sort((a, b) => Number(!!b.is_new) - Number(!!a.is_new)).map((i) => `${i.is_new ? "🆕" : "•"} ${i.name}${i.is_new ? " (NEW)" : ""} — ${formatCents(i.price_cents)}`),
     ...(sides.length ? [`On the side: ${sides.map((i) => `${i.name} ${formatCents(i.price_cents)}`).join(" · ")}`] : []),
   ].join("\n");
   const hours = `${fmtTime(s.starts_at, tz)} to ${fmtTime(s.ends_at, tz)}`;

@@ -32,6 +32,7 @@ export default async function SharePage({ params }: PageProps<"/admin/services/[
     description: r.description_override ?? r.menu_items.description,
     is_sold_out: r.sold_out_manual,
     is_pie: Number(r.menu_items.capacity_units) > 0,
+    is_new: !!r.is_new,
   }));
   const zoneNames = ((sz ?? []) as unknown as { delivery_zones: Pick<DeliveryZone, "name"> }[]).map((z) => z.delivery_zones.name);
   const vars = shareVars({

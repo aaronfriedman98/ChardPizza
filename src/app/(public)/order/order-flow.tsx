@@ -206,7 +206,10 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="font-display text-[26px] font-medium">{item.name}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="font-display text-[26px] font-medium">{item.name}</span>
+                          {item.is_new && <span className="new-tag">New</span>}
+                        </div>
                         {item.description && <p className="mt-1 text-sm text-flour/65">{item.description}</p>}
                         <div className="mt-2 font-display text-xl text-gold2">{formatCents(item.price_cents)}</div>
                       </div>

@@ -78,8 +78,10 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
     description: r.description_override ?? r.menu_items.description ?? "",
     price_cents: r.price_cents,
     isPie: Number(r.menu_items.capacity_units) > 0,
+    isNew: !!r.is_new,
   }));
-  const pies = all.filter((i) => i.isPie);
+  // New pies lead, so the 3-pie cap never hides a new drop.
+  const pies = all.filter((i) => i.isPie).sort((a, b) => Number(b.isNew) - Number(a.isNew));
   const sides = all.filter((i) => !i.isPie);
   const shown = pies.slice(0, PIE_CAP);
   const more = pies.length - shown.length;
@@ -157,6 +159,13 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
             <div key={i} style={{ display: "flex", flexDirection: "column", marginTop: tight ? 18 : 26 }}>
               <div style={{ display: "flex", alignItems: "baseline" }}>
                 <div style={{ fontFamily: "Anton", fontSize: tight ? 46 : 56, letterSpacing: 1.5, lineHeight: 1 }}>{caps(p.name)}</div>
+                {p.isNew && (
+                  <div style={{ display: "flex", position: "relative", width: 112, height: 46, marginLeft: 18, alignItems: "center", justifyContent: "center", transform: "rotate(-4deg)", alignSelf: "center" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={brush(112, 46, AMBER, 23)} width={112} height={46} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
+                    <div style={{ fontFamily: "Anton", fontSize: 26, color: INK, letterSpacing: 3 }}>NEW</div>
+                  </div>
+                )}
                 {!uniform && <div style={{ marginLeft: "auto", fontFamily: "Anton", fontSize: tight ? 40 : 48, color: AMBER }}>{money(p.price_cents)}</div>}
               </div>
               {p.description && (

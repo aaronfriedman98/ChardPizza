@@ -44,6 +44,7 @@ export type PublicMenuItem = {
   photo_url: string | null;
   is_sold_out: boolean;
   quantity_remaining: number | null;
+  is_new: boolean;
 };
 
 export type PublicSlot = {
@@ -104,6 +105,7 @@ export async function getOrderingData(serviceId: string): Promise<OrderingData |
       photo_url: r.menu_items.photo_url,
       is_sold_out: a?.is_sold_out ?? false,
       quantity_remaining: a?.quantity_remaining ?? null,
+      is_new: !!r.is_new,
     };
   });
 

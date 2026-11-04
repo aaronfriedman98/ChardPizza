@@ -300,3 +300,17 @@ html:where(.js) .meter > span {
   .underline-draw::after { transform: scaleX(1); }
   .meter > span { transform: scaleX(var(--fill, 1)); }
 }
+
+/* "New" pie tag on the public menu and order flow: amber stamp, matches the flyer. */
+.new-tag {
+  display: inline-block;
+  padding: 3px 9px 2px;
+  background: #f2a33a;
+  color: #1b1412;
+  font-family: var(--font-anton), sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  transform: rotate(-3deg);
+}

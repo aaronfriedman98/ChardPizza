@@ -15,6 +15,7 @@ type Row = {
   price: string;
   quantity_limit: string;
   is_available: boolean;
+  is_new: boolean;
   description_override: string | null;
 };
 
@@ -31,6 +32,7 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
           price: centsToDollarsInput(e?.price_cents ?? item.default_price_cents),
           quantity_limit: e?.quantity_limit == null ? "" : String(e.quantity_limit),
           is_available: e?.is_available ?? true,
+          is_new: e?.is_new ?? false,
           description_override: e?.description_override ?? null,
         };
       }),
@@ -87,7 +89,7 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
                 </div>
               </div>
               {r.included && (
-                <div className="grid gap-3 sm:grid-cols-3 pl-8">
+                <div className="grid gap-3 sm:grid-cols-4 pl-8">
                   <label className="block">
                     <span className="label">Price tonight ($)</span>
                     <input inputMode="decimal" value={r.price} onChange={(e) => update(r.menu_item_id, { price: e.target.value })} className="input" />
@@ -105,6 +107,12 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
                   <div className="flex items-end justify-between gap-3 pb-1">
                     <span className="text-sm">Available</span>
                     <Switch checked={r.is_available} onChange={(v) => update(r.menu_item_id, { is_available: v })} label={`${item.name} available`} />
+                  </div>
+                  <div className="flex items-end justify-between gap-3 pb-1">
+                    <span className="text-sm">
+                      New <span className="text-xs text-ink/50">(badge + flyer)</span>
+                    </span>
+                    <Switch checked={r.is_new} onChange={(v) => update(r.menu_item_id, { is_new: v })} label={`${item.name} is new`} />
                   </div>
                 </div>
               )}
