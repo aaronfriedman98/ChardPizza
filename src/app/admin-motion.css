@@ -53,7 +53,9 @@
 .is-stale { opacity: 0.55; transition: opacity 0.25s ease; pointer-events: none; }
 
 /* New page content fades up instead of snapping in. */
-.page-fade { animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* "backwards", not "both": a transform left applied after the animation turns the page into the
+   containing block for position:fixed children, which pushed modals off-screen. */
+.page-fade { animation: page-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 @keyframes page-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }

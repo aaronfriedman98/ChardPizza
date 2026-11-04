@@ -116,7 +116,9 @@ function ItemForm({
 }) {
   const [state, action] = useActionState(saveMenuItem, undefined);
   const [pending, startTransition] = useBusyTransition();
-  const [units, setUnits] = useState<number>(item?.capacity_units ?? 1);
+  // Kept as text so clearing the box to retype doesn't flip the item to "no oven capacity".
+  const [counts, setCounts] = useState(item ? Number(item.capacity_units) > 0 : true);
+  const [unitsText, setUnitsText] = useState(String(item && Number(item.capacity_units) > 0 ? item.capacity_units : 1));
 
   useEffect(() => {
     if (state?.ok) onDone();
@@ -155,9 +157,9 @@ function ItemForm({
             <div className="font-medium">Counts toward pizza capacity</div>
             <div className="text-sm text-ink/60">A pie uses the oven. Sides and soup usually do not.</div>
           </div>
-          <Switch checked={units > 0} label="Counts toward capacity" onChange={(v) => setUnits(v ? 1 : 0)} />
+          <Switch checked={counts} label="Counts toward capacity" onChange={setCounts} />
         </div>
-        {units > 0 && (
+        {counts && (
           <label className="block">
             <span className="label">Pizza units per item</span>
             <input
@@ -166,14 +168,15 @@ function ItemForm({
               step="0.25"
               min={0.25}
               max={20}
-              value={units}
-              onChange={(e) => setUnits(parseFloat(e.target.value) || 0)}
+              value={unitsText}
+              onChange={(e) => setUnitsText(e.target.value)}
+              required
               className="input"
             />
             <span className="mt-1 block text-xs text-ink/50">1 for a normal pie. 0.5 for a half pie, 2 for a double, and so on.</span>
           </label>
         )}
-        {units === 0 && <input type="hidden" name="capacity_units" value="0" />}
+        {!counts && <input type="hidden" name="capacity_units" value="0" />}
       </div>
 
       <label className="block">
