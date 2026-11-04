@@ -30,8 +30,10 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
   const isLogin = pathname === "/admin/login";
+  // Signed-out pages: sign in, ask for a reset link, and the link's landing route.
+  const isPublic = isLogin || pathname === "/admin/forgot-password" || pathname.startsWith("/admin/auth/");
 
-  if (isAdminRoute && !isLogin && !user) {
+  if (isAdminRoute && !isPublic && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.searchParams.set("next", pathname);

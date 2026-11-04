@@ -4,8 +4,9 @@ import { AccountForms } from "./account-forms";
 
 export const metadata = { title: "Account | Char'd Pizza" };
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: PageProps<"/admin/settings/account">) {
   const { supabase, admin } = await requireAdmin();
+  const { reset } = await searchParams;
   const { data: team } = await supabase
     .from("admin_users")
     .select("id, display_name, email, role, is_partner, is_active, created_at")
@@ -13,6 +14,11 @@ export default async function AccountPage() {
 
   return (
     <div className="grid gap-5 max-w-3xl lg:grid-cols-2">
+      {reset === "1" && (
+        <p className="lg:col-span-2 rounded-xl border border-ember/30 bg-ember/10 px-4 py-3 text-sm">
+          You&rsquo;re signed in from the reset link. Set a new password below so you can sign in normally next time.
+        </p>
+      )}
       <AccountForms admin={admin} />
       <section className="card space-y-3">
         <h2 className="text-lg font-bold">Team</h2>
