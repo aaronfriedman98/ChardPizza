@@ -157,6 +157,7 @@ export default function GuidePage() {
             ["Mark paid", "They paid you cash, or you saw the Zelle land. Records the payment. Card orders are already PAID when they arrive."],
             ["Undo paid", "You hit Mark paid by mistake. Writes a refund line so the money math still adds up."],
             ["📩 Text confirmation", "Appears only when the customer got no confirmation email (no address, or it bounced). Opens your texting app with the order summary filled in. Tap send, and the card shows “Confirmation texted”."],
+            ["💲 Text new total", "Appears after you put Family & friends (or a custom price) on an order the customer placed themselves. Texts them the discounted total and how to pay, since their confirmation showed full price. Never shows on orders you entered by hand."],
             ["💬 Message", "Opens WhatsApp to that customer with a ready-made text. See the next section."],
             ["Here", "The customer showed up early. Puts a HERE badge on the card and pulls them up the oven queue."],
             ["Make now", "Jump this order to the front of the oven list. Use for someone waiting, or a mistake you need to redo."],

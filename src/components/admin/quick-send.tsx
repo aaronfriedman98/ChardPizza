@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Settings } from "@/lib/types";
 import type { Order } from "@/lib/orders";
-import { minutesBehind, wasEmailed, wasTextedConfirmation } from "@/lib/orders";
+import { minutesBehind, needsPriceText, wasEmailed, wasPriceTexted, wasTextedConfirmation } from "@/lib/orders";
 import { type MessageTemplate, messageVars, renderMessage, whatsAppLink, smsLink } from "@/lib/messages";
 import { getMessageTemplates, logMessage } from "@/app/admin/orders/message-actions";
 
@@ -12,6 +12,46 @@ let cache: MessageTemplate[] | null = null;
 
 const FALLBACK_CONFIRMATION =
   "Hi {{first_name}}! Got your {{business_name}} order {{order_number}}: {{items}}. {{pickup_time}}. {{payment_instructions}} Track it here: {{order_link}}";
+
+const FALLBACK_PRICE_UPDATED =
+  "Hi {{first_name}}! {{tier_name}} pricing is on your {{business_name}} order {{order_number}}, so your total is now {{total}}. {{payment_instructions}}";
+
+/**
+ * "Text new total" on an order card. Shows when the customer placed the order
+ * themselves and you then put family (or custom) pricing on it: they only know
+ * the full price from their confirmation. Opens SMS with the new total filled in.
+ */
+export function PriceText({ order: o, settings }: { order: Order; settings: Settings }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  if (!needsPriceText(o)) return null;
+  const sent = wasPriceTexted(o);
+
+  async function send() {
+    setBusy(true);
+    const templates = cache ?? (await getMessageTemplates());
+    cache = templates;
+    const t = templates.find((x) => x.key === "price_updated");
+    const tierName = o.price_tiers?.name ?? "Special";
+    const body = renderMessage(t?.body ?? FALLBACK_PRICE_UPDATED, messageVars(o, settings, { tier_name: tierName }));
+    window.open(smsLink(o.customer_phone, body), "_blank", "noopener");
+    await logMessage({ order_id: o.id, template_key: "price_updated", channel: "sms", recipient: o.customer_phone, body });
+    setBusy(false);
+    router.refresh();
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={send}
+      className={`rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-60 ${sent ? "border-line bg-white text-ink/60 hover:bg-cream" : "border-blue-400 bg-blue-50 text-blue-900 hover:bg-blue-100"}`}
+      title="They ordered at full price. Text them the discounted total."
+    >
+      {sent ? "✓ Total texted · again" : "💲 Text new total"}
+    </button>
+  );
+}
 
 /**
  * "Text confirmation" on an order card. Shows only when the customer got no email

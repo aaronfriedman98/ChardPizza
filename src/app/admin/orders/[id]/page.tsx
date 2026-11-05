@@ -25,7 +25,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/admin/orde
   const [{ data: orderRow }, { data: settingsRow }] = await Promise.all([
     supabase
       .from("orders")
-      .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each), services(id, name, service_date)")
+      .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each), services(id, name, service_date), notifications(channel, template_key, status), price_tiers(name)")
       .eq("id", id)
       .maybeSingle(),
     supabase.from("settings").select("*").eq("id", true).single(),

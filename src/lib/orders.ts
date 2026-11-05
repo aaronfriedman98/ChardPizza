@@ -58,6 +58,17 @@ export interface Order {
   order_items: OrderItem[];
   /** Present on ops screens: what has already gone out for this order. */
   notifications?: { channel: string; template_key: string | null; status: string }[];
+  /** Joined tier name when special pricing is on the order. */
+  price_tiers?: { name: string } | null;
+}
+
+/** Special pricing on an order the customer placed themselves: they still think they owe full price. */
+export function needsPriceText(o: Order) {
+  const special = !!o.price_tier_id || o.pie_price_override_cents != null;
+  return special && !o.created_by_admin_id && o.payment_status !== "paid" && o.status !== "cancelled" && o.status !== "completed";
+}
+export function wasPriceTexted(o: Order) {
+  return (o.notifications ?? []).some((n) => n.template_key === "price_updated" && n.status === "sent");
 }
 
 export function wasEmailed(o: Order) {
@@ -91,7 +102,7 @@ export const PAY_LABEL: Record<PaymentStatus, string> = {
 export async function loadServiceOrders(supabase: SupabaseClient, serviceId: string): Promise<Order[]> {
   const { data } = await supabase
     .from("orders")
-    .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each), notifications(channel, template_key, status)")
+    .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each), notifications(channel, template_key, status), price_tiers(name)")
     .eq("service_id", serviceId)
     .order("scheduled_at")
     .order("created_at");
