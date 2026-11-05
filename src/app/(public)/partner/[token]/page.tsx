@@ -14,7 +14,7 @@ export const metadata = { title: "Live numbers | Char'd Pizza", robots: { index:
 // Read-only numbers for the partner. The link is the password: PARTNER_VIEW_TOKEN in the environment.
 export default async function PartnerPage({ params }: PageProps<"/partner/[token]">) {
   const { token } = await params;
-  const expected = process.env.PARTNER_VIEW_TOKEN;
+  const expected = process.env.PARTNER_VIEW_TOKEN ?? process.env.PARNTER_VIEW_TOKEN;
   if (!expected || token !== expected) notFound();
 
   const db = createAdminClient();
