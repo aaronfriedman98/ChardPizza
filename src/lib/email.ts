@@ -103,8 +103,7 @@ function buildText(o: Order, s: Settings, intro: string, link: string) {
     "",
     o.fulfillment === "delivery"
       ? `Delivering to: ${[o.address_line1, o.address_line2, o.address_city].filter(Boolean).join(", ")}`
-      : `Pickup at: ${s.pickup_address ?? ""}${s.pickup_instructions ? `
-${s.pickup_instructions}` : ""}`,
+      : `Pickup at: ${s.pickup_address ?? ""}${s.pickup_instructions ? `\n${s.pickup_instructions}` : ""}`,
     "",
     `Payment: ${o.payment_status === "paid" ? "Paid. Thank you!" : o.payment_method === "zelle" ? (s.zelle_instructions ?? "Pay by Zelle before pickup.") : o.payment_method === "cash" ? "Cash due at pickup." : ""}`,
     ...(o.special_instructions ? ["", `Your note: ${o.special_instructions}`] : []),
@@ -113,8 +112,7 @@ ${s.pickup_instructions}` : ""}`,
     "",
     `${s.business_name}${s.business_email ? " - " + s.business_email : ""}`,
   ];
-  return lines.join("
-");
+  return lines.join("\n");
 }
 
 function buildHtml(o: Order, s: Settings, intro: string, link: string) {

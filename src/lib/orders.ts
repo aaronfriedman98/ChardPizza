@@ -56,6 +56,15 @@ export interface Order {
   cancel_reason: string | null;
   created_at: string;
   order_items: OrderItem[];
+  /** Present on ops screens: what has already gone out for this order. */
+  notifications?: { channel: string; template_key: string | null; status: string }[];
+}
+
+export function wasEmailed(o: Order) {
+  return (o.notifications ?? []).some((n) => n.channel === "email" && n.status === "sent");
+}
+export function wasTextedConfirmation(o: Order) {
+  return (o.notifications ?? []).some((n) => n.channel !== "email" && n.template_key === "order_received" && n.status === "sent");
 }
 
 export const ACTIVE: OrderStatus[] = ["confirmed", "making", "ready", "out_for_delivery"];
@@ -82,7 +91,7 @@ export const PAY_LABEL: Record<PaymentStatus, string> = {
 export async function loadServiceOrders(supabase: SupabaseClient, serviceId: string): Promise<Order[]> {
   const { data } = await supabase
     .from("orders")
-    .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each)")
+    .select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each), notifications(channel, template_key, status)")
     .eq("service_id", serviceId)
     .order("scheduled_at")
     .order("created_at");

@@ -1,13 +1,56 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Settings } from "@/lib/types";
 import type { Order } from "@/lib/orders";
-import { minutesBehind } from "@/lib/orders";
+import { minutesBehind, wasEmailed, wasTextedConfirmation } from "@/lib/orders";
 import { type MessageTemplate, messageVars, renderMessage, whatsAppLink, smsLink } from "@/lib/messages";
 import { getMessageTemplates, logMessage } from "@/app/admin/orders/message-actions";
 
 let cache: MessageTemplate[] | null = null;
+
+const FALLBACK_CONFIRMATION =
+  "Hi {{first_name}}! Got your {{business_name}} order {{order_number}}: {{items}}. {{pickup_time}}. {{payment_instructions}} Track it here: {{order_link}}";
+
+/**
+ * "Text confirmation" on an order card. Shows only when the customer got no email
+ * (none given, or it failed) and nobody has texted a confirmation yet. Opens the
+ * phone's SMS app with the order_received template filled in; logs the tap.
+ */
+export function ConfirmText({ order: o, settings }: { order: Order; settings: Settings }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  if (wasEmailed(o) || o.status === "cancelled" || o.status === "completed") return null;
+  if (wasTextedConfirmation(o)) {
+    return <span className="rounded-lg bg-green-50 px-2.5 py-2 text-xs font-semibold text-green-700">✓ Confirmation texted</span>;
+  }
+
+  async function send() {
+    setBusy(true);
+    const templates = cache ?? (await getMessageTemplates());
+    cache = templates;
+    const t = templates.find((x) => x.key === "order_received");
+    const when = `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${new Date(o.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: settings.time_zone })}`;
+    const body = renderMessage(t?.body ?? FALLBACK_CONFIRMATION, messageVars(o, settings, { pickup_time: when }));
+    window.open(smsLink(o.customer_phone, body), "_blank", "noopener");
+    await logMessage({ order_id: o.id, template_key: "order_received", channel: "sms", recipient: o.customer_phone, body });
+    setBusy(false);
+    router.refresh();
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={send}
+      className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+      title="No email went out for this order. Send them a confirmation text."
+    >
+      📩 Text confirmation
+    </button>
+  );
+}
 
 /**
  * "Message" button on an order card. Opens a menu of templates; each one builds the

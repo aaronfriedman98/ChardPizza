@@ -82,6 +82,10 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
   ]);
   if (!data) notFound();
   const o = data as unknown as OrderRow;
+  const { data: emailRows } = o.customer_email
+    ? await db.from("notifications").select("status").eq("order_id", o.id).eq("channel", "email").eq("status", "sent").limit(1)
+    : { data: [] };
+  const emailed = (emailRows ?? []).length > 0;
   const tz = settings.time_zone;
   const first = o.customer_name.split(" ")[0];
   const cancelled = o.status === "cancelled";
@@ -230,6 +234,11 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
             {o.customer_name} · {formatPhone(o.customer_phone)}
             {o.customer_email ? ` · ${o.customer_email}` : ""}
           </div>
+          {emailed && !cancelled && (
+            <p className="mt-2 rounded-lg border border-gold/40 bg-gold/[0.08] px-3 py-2 text-flour">
+              We emailed a copy to <b>{o.customer_email}</b>. We&rsquo;re a new sender, so if it isn&rsquo;t in your inbox, check your spam or junk folder.
+            </p>
+          )}
           <p className="mt-2">Keep this link. It shows your order status, and it&rsquo;s where we&rsquo;ll update you if anything changes.</p>
           {settings.business_email && (
             <p className="mt-2">
