@@ -89,8 +89,10 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const more = pies.length - shown.length;
   const uniform = pies.length > 0 && new Set(pies.map((p) => p.price_cents)).size === 1 ? `${money(pies[0].price_cents)} A PIE` : null;
   const tight = shown.length >= 3 || sides.length > 0 || more > 0;
-  // The comeback headline block is taller, so long menu copy gets trimmed to keep the order strip on the page.
-  const descCap = back && shown.reduce((a, p) => a + p.description.length, 0) > 420 ? 150 : null;
+  // Long menu copy shrinks the headline and spacing; very long copy gets trimmed. The order strip must always stay on the page.
+  const descTotal = shown.reduce((a, p) => a + p.description.length, 0);
+  const compact = tight || back || descTotal > 240;
+  const descCap = tight ? 88 : descTotal > 420 ? 150 : null;
 
   const zones = ((sz ?? []) as unknown as { delivery_zones: Pick<DeliveryZone, "name"> }[]).map((z) => z.delivery_zones.name);
   const url = orderUrl(settings, "flyer");
@@ -117,8 +119,8 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const dateLine = back
     ? `${fmtDateOnly(s.service_date, "EEE MMM d").toUpperCase()} · ${hoursRange(s.starts_at, s.ends_at, tz)}`
     : `${fmtDateOnly(s.service_date, "MMM d").toUpperCase()}  ·  ${hoursRange(s.starts_at, s.ends_at, tz)}`;
-  const dayFs = Math.min(tight ? 170 : 200, Math.floor(1560 / Math.max(day.length, 6)));
-  const pizzaFs = tight ? 230 : 270;
+  const dayFs = Math.min(compact ? 170 : 200, Math.floor(1560 / Math.max(day.length, 6)));
+  const pizzaFs = compact ? 230 : 270;
   const label = { fontSize: 18, fontWeight: 700, letterSpacing: 6, color: AMBER } as const;
 
   return new ImageResponse(
@@ -141,7 +143,7 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
         </div>
 
         {/* stamped headline */}
-        <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: `${back ? 16 : tight ? 36 : 64}px 58px 0 58px` }}>
+        <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: `${back ? 16 : compact ? 36 : 64}px 58px 0 58px` }}>
           <div style={{ fontFamily: "Anton", fontSize: dayFs, lineHeight: 0.9, color: AMBER, letterSpacing: 2 }}>{day}</div>
           <div style={{ fontFamily: "Anton", fontSize: pizzaFs, lineHeight: 0.86, color: CREAM, letterSpacing: 4, marginTop: 4 }}>{big}</div>
           {back && <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: 7, color: AMBER, marginTop: 8, marginLeft: 6 }}>THE OVEN IS LIT AGAIN</div>}
@@ -157,16 +159,16 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
         </div>
 
         {/* menu */}
-        <div style={{ display: "flex", flexDirection: "column", padding: `${back ? 24 : 40}px 64px 0 64px` }}>
+        <div style={{ display: "flex", flexDirection: "column", padding: `${back ? 24 : compact ? 30 : 40}px 64px 0 64px`, flexShrink: 1, overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={label}>THE PIES</div>
             <div style={{ flex: 1, height: 2, backgroundColor: BRICK, margin: "0 20px", opacity: 0.8 }} />
             {uniform && <div style={{ ...label, color: CREAM }}>{uniform}</div>}
           </div>
           {shown.map((p, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", marginTop: tight ? 18 : 26 }}>
+            <div key={i} style={{ display: "flex", flexDirection: "column", marginTop: compact ? 18 : 26 }}>
               <div style={{ display: "flex", alignItems: "baseline" }}>
-                <div style={{ fontFamily: "Anton", fontSize: tight ? 46 : 56, letterSpacing: 1.5, lineHeight: 1 }}>{caps(p.name)}</div>
+                <div style={{ fontFamily: "Anton", fontSize: compact ? 46 : 56, letterSpacing: 1.5, lineHeight: 1 }}>{caps(p.name)}</div>
                 {p.isNew && (
                   <div style={{ display: "flex", position: "relative", width: 112, height: 46, marginLeft: 18, alignItems: "center", justifyContent: "center", transform: "rotate(-4deg)", alignSelf: "center" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -174,10 +176,10 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
                     <div style={{ fontFamily: "Anton", fontSize: 26, color: INK, letterSpacing: 3 }}>NEW</div>
                   </div>
                 )}
-                {!uniform && <div style={{ marginLeft: "auto", fontFamily: "Anton", fontSize: tight ? 40 : 48, color: AMBER }}>{money(p.price_cents)}</div>}
+                {!uniform && <div style={{ marginLeft: "auto", fontFamily: "Anton", fontSize: compact ? 40 : 48, color: AMBER }}>{money(p.price_cents)}</div>}
               </div>
               {p.description && (
-                <div style={{ fontSize: tight ? 20 : 23, lineHeight: 1.35, color: CREAM2, marginTop: 6, maxWidth: 900 }}>{tight ? clip(p.description, 88) : descCap ? clip(p.description, descCap) : p.description}</div>
+                <div style={{ fontSize: compact ? 21 : 23, lineHeight: 1.35, color: CREAM2, marginTop: 6, maxWidth: 900 }}>{descCap ? clip(p.description, descCap) : p.description}</div>
               )}
             </div>
           ))}
@@ -191,7 +193,7 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
         </div>
 
         {/* torn amber order strip */}
-        <div style={{ display: "flex", position: "relative", marginTop: "auto", height: 244 }}>
+        <div style={{ display: "flex", position: "relative", marginTop: "auto", height: 244, flexShrink: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={paper(W, 244, AMBER, { t: true }, 31)} width={W} height={244} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
           <div style={{ display: "flex", flex: 1, alignItems: "center", padding: "26px 64px 0 64px" }}>
