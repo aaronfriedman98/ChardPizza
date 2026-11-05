@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BusyLink } from "@/components/admin/feedback";
 
@@ -19,7 +20,8 @@ export const NAV = [
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
-const MOBILE = ["/admin", "/admin/service", "/admin/kitchen", "/admin/handoff", "/admin/orders"];
+/** The four that matter mid-service get their own tab; everything else lives under More. */
+const MOBILE = ["/admin", "/admin/service", "/admin/kitchen", "/admin/handoff"];
 
 function isActive(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -56,24 +58,66 @@ export function SideNav() {
 
 export function BottomNav() {
   const pathname = usePathname();
-  const items = NAV.filter((n) => MOBILE.includes(n.href));
+  const [more, setMore] = useState(false);
+  const tabs = NAV.filter((n) => MOBILE.includes(n.href));
+  const rest = NAV.filter((n) => !MOBILE.includes(n.href));
+  const restActive = rest.some((n) => isActive(pathname, n.href));
+
+  // Close the sheet once a link inside it has navigated.
+  useEffect(() => setMore(false), [pathname]);
+  useEffect(() => {
+    if (!more) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMore(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [more]);
+
+  const tabClass = (active: boolean) =>
+    `nav-link-admin relative flex w-full flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${active ? "text-ember" : "text-ink/60"}`;
+
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-line bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
-      <ul className="grid grid-cols-5">
-        {items.map((item) => (
-          <li key={item.href}>
-            <BusyLink
-              href={item.href}
-              className={`nav-link-admin relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
-                isActive(pathname, item.href) ? "text-ember" : "text-ink/60"
-              }`}
-            >
-              <span className="text-lg leading-none">{item.icon}</span>
-              {item.label === "Service Board" ? "Board" : item.label}
-            </BusyLink>
+    <>
+      {more && (
+        <div className="md:hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="All pages">
+          <div className="absolute inset-0 bg-char/50" onClick={() => setMore(false)} />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[calc(76px+env(safe-area-inset-bottom))] shadow-xl">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/15" />
+            <ul className="grid grid-cols-3 gap-2">
+              {rest.map((item) => (
+                <li key={item.href}>
+                  <BusyLink
+                    href={item.href}
+                    className={`nav-link-admin flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-xs font-medium ${
+                      isActive(pathname, item.href) ? "border-ember bg-ember/10 text-ember" : "border-line text-ink/80"
+                    }`}
+                  >
+                    <span className="text-xl leading-none">{item.icon}</span>
+                    {item.label === "Service Board" ? "Board" : item.label}
+                  </BusyLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-line bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+        <ul className="grid grid-cols-5">
+          {tabs.map((item) => (
+            <li key={item.href}>
+              <BusyLink href={item.href} className={tabClass(isActive(pathname, item.href) && !more)}>
+                <span className="text-lg leading-none">{item.icon}</span>
+                {item.label === "Service Board" ? "Board" : item.label}
+              </BusyLink>
+            </li>
+          ))}
+          <li>
+            <button type="button" onClick={() => setMore((v) => !v)} className={tabClass(more || restActive)} aria-expanded={more}>
+              <span className="text-lg leading-none">{more ? "✕" : "•••"}</span>
+              More
+            </button>
           </li>
-        ))}
-      </ul>
-    </nav>
+        </ul>
+      </nav>
+    </>
   );
 }

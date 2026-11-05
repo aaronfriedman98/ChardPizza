@@ -4,6 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { SideNav, BottomNav } from "@/components/admin/nav";
 import { AdminProgress, PageFade, Toasts } from "@/components/admin/feedback";
 import { SignOutButton } from "./sign-out-button";
+import type { Metadata, Viewport } from "next";
+
+// "Add to Home Screen" on a phone opens the admin as its own full-screen app.
+export const metadata: Metadata = {
+  title: "Char'd Admin",
+  manifest: "/admin.webmanifest",
+  appleWebApp: { capable: true, title: "Char'd", statusBarStyle: "default" },
+};
+export const viewport: Viewport = { themeColor: "#160f0b" };
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const supabase = await createClient();
