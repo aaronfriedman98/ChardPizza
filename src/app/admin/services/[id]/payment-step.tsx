@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { savePayment } from "../actions";
 import { NextStepLink } from "./stepper";
 
-export function PaymentStep({ service: s, settings }: { service: Service; settings: Settings }) {
+export function PaymentStep({ service: s, settings, cardReady }: { service: Service; settings: Settings; cardReady: boolean }) {
   const [cash, setCash] = useState(s.cash_enabled);
   const [zelle, setZelle] = useState(s.zelle_enabled);
   const [card, setCard] = useState(s.card_enabled);
@@ -50,7 +50,13 @@ export function PaymentStep({ service: s, settings }: { service: Service; settin
           checked={zelle}
           onChange={setZelle}
         />
-        <RowT label="Credit / debit card" hint="Needs Stripe, which is a later step. Leave off for now." checked={card} onChange={setCard} disabled />
+        <RowT
+          label="Credit / debit card"
+          hint={cardReady ? "Customers pay on Stripe's secure page (Apple Pay, Google Pay, cards). Shows as paid automatically." : "Stripe isn't connected on this site yet."}
+          checked={card}
+          onChange={setCard}
+          disabled={!cardReady && !card}
+        />
       </section>
 
       <section className="card space-y-4">

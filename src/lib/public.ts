@@ -1,4 +1,5 @@
 import "server-only";
+import { releaseExpiredCardHolds } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { DeliveryZone, MenuItem, Service, ServiceAvailability, ServiceMenuItem, Settings, SlotAvailability } from "@/lib/types";
 import { publicState, type PublicState } from "@/lib/service-state";
@@ -69,6 +70,7 @@ export type OrderingData = {
 };
 
 export async function getOrderingData(serviceId: string): Promise<OrderingData | null> {
+  await releaseExpiredCardHolds();
   const db = createAdminClient();
   const now = new Date();
   const [settingsQ, serviceQ, availQ, smiQ, itemAvailQ, slotsQ, zonesQ] = await Promise.all([

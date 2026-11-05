@@ -77,7 +77,9 @@ export async function markPaid(orderId: string, method?: PaymentMethod, note?: s
     });
     if (pErr) return { error: pErr.message };
   }
-  const { error } = await supabase.from("orders").update({ payment_status: "paid", payment_method: m }).eq("id", orderId);
+  // A card order paid another way at the door is a real order now: let the kitchen see it and stop the hold sweep.
+  const promote = o.status === "pending_payment" ? { status: "confirmed" as const, expires_at: null } : {};
+  const { error } = await supabase.from("orders").update({ payment_status: "paid", payment_method: m, ...promote }).eq("id", orderId);
   if (error) return { error: error.message };
   await audit(supabase, admin.id, "order.paid", "order", orderId, { order_number: o.order_number, method: m, amount_cents: due });
   touch();

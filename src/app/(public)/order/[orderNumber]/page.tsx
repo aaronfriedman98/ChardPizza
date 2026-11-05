@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/public";
 import { formatCents, formatPhone } from "@/lib/format";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
+import { releaseExpiredCardHolds, settleCheckoutSession, stripeConfigured } from "@/lib/stripe";
+import { PayNow } from "./pay-now";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your order | Char'd Pizza" };
@@ -55,8 +57,18 @@ const PAY_COPY: Record<string, string> = {
 
 export default async function ConfirmationPage({ params, searchParams }: PageProps<"/order/[orderNumber]">) {
   const { orderNumber } = await params;
-  const { t } = await searchParams;
+  const { t, session_id, canceled } = await searchParams;
   if (typeof t !== "string" || !t) notFound();
+
+  // Back from Stripe: record the payment now rather than waiting on the webhook.
+  if (typeof session_id === "string" && session_id && stripeConfigured()) {
+    try {
+      await settleCheckoutSession(session_id);
+    } catch (e) {
+      console.error("settle on return failed", e);
+    }
+  }
+  if (stripeConfigured()) await releaseExpiredCardHolds();
 
   const db = createAdminClient();
   const [{ data }, settings] = await Promise.all([
@@ -73,6 +85,8 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
   const tz = settings.time_zone;
   const first = o.customer_name.split(" ")[0];
   const cancelled = o.status === "cancelled";
+  const awaitingCard = o.status === "pending_payment";
+  const cardAbandoned = cancelled && o.payment_method === "card" && o.payment_status !== "paid";
 
   return (
     <main className="min-h-dvh">
@@ -86,9 +100,11 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
 
       <section className="">
         <div className="mx-auto max-w-2xl px-5 pb-12 pt-6 text-center">
-          <div className="rise text-xs font-semibold uppercase tracking-[0.3em] text-gold2">{cancelled ? "Order cancelled" : "You're in"}</div>
+          <div className="rise text-xs font-semibold uppercase tracking-[0.3em] text-gold2">
+            {cancelled ? "Order cancelled" : awaitingCard ? "Almost there" : "You're in"}
+          </div>
           <h1 className="rise rise-1 mt-2 font-display text-[52px] font-medium leading-none sm:text-[64px]">
-            {cancelled ? "Sorry, " : "Thanks, "}
+            {cancelled ? "Sorry, " : awaitingCard ? "One more step, " : "Thanks, "}
             {first}
           </h1>
           <div className="rise rise-2 mt-5 inline-block border border-gold/50 bg-gold/10 px-6 py-3">
@@ -105,6 +121,15 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
       </section>
 
       <section className="mx-auto max-w-2xl space-y-4 px-5 pb-16">
+        {cardAbandoned && (
+          <div className="border border-gold/50 bg-gold/[0.08] p-5">
+            <p>The card payment wasn&rsquo;t finished, so this order was released. Your card was not charged.</p>
+            <Link href="/order" className="btn-amber mt-3 inline-block px-7">
+              Order again
+            </Link>
+          </div>
+        )}
+
         {/* Payment */}
         {!cancelled && (
           <div className={`border p-5 ${o.payment_status === "paid" ? "border-green-500/40 bg-green-500/10" : "border-gold/50 bg-gold/[0.08]"}`}>
@@ -117,6 +142,15 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
               <p className="mt-2 text-flour/85">{settings.zelle_instructions ?? "We'll send Zelle instructions shortly."}</p>
             )}
             {o.payment_method === "cash" && o.payment_status !== "paid" && <p className="mt-2 text-flour/85">Cash is due when you pick up.</p>}
+            {awaitingCard && (
+              <>
+                <p className="mt-2 text-flour/85">
+                  {canceled ? "You left the payment page before paying. " : ""}Your time is held for a few minutes. Pay by card to lock it in.
+                </p>
+                <PayNow orderNumber={o.order_number} token={t} />
+              </>
+            )}
+            {o.payment_method === "card" && o.payment_status === "paid" && <p className="mt-2 text-flour/85">Paid by card. YouPaid by card. A receipt is on its way to your email.rsquo;re all set.</p>}
           </div>
         )}
 

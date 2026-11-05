@@ -67,7 +67,7 @@ export default async function ServiceDetailPage({ params, searchParams }: PagePr
       {step === "menu" && <MenuStep service={service} library={library} serviceMenu={serviceMenu} />}
       {step === "capacity" && <CapacityStep service={service} slots={slots} availability={availability} tz={tz} />}
       {step === "fulfillment" && <FulfillmentStep service={service} zones={zones} serviceZones={serviceZones} />}
-      {step === "payment" && <PaymentStep service={service} settings={settings} />}
+      {step === "payment" && <PaymentStep service={service} settings={settings} cardReady={!!process.env.STRIPE_SECRET_KEY} />}
       {step === "review" && (
         <ReviewStep
           service={service}

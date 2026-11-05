@@ -1,10 +1,12 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
 import { sendOrderConfirmation } from "@/lib/email";
+import { createCheckoutForOrder, releaseExpiredCardHolds, stripeConfigured } from "@/lib/stripe";
 
 const schema = z.object({
   service_id: z.string().uuid(),
@@ -50,8 +52,10 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
   const phone = normalizePhone(v.customer.phone);
   if (!phone) return { error: "Enter a 10-digit US phone number.", code: "INVALID" };
   if (v.fulfillment === "delivery" && !v.delivery) return { error: "Enter your delivery address.", code: "INVALID" };
-  if (v.payment_method === "card") return { error: "Card payments are coming soon. Choose cash or Zelle.", code: "INVALID" };
+  if (v.payment_method === "card" && !stripeConfigured()) return { error: "Card payments aren't available right now. Choose cash or Zelle.", code: "INVALID" };
 
+  // Abandoned card checkouts give their time slots back before we count what's left.
+  await releaseExpiredCardHolds();
   const db = createAdminClient();
   const { data, error } = await db.rpc("place_order", {
     payload: {
@@ -81,6 +85,20 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
   }
 
   const result = data as { id: string; order_number: string; token: string };
+
+  if (v.payment_method === "card") {
+    // Card: the order holds its slot as "awaiting payment"; the confirmation email goes out once Stripe says paid.
+    let url: string;
+    try {
+      url = await createCheckoutForOrder(result.id, await siteOrigin());
+    } catch (e) {
+      console.error("stripe checkout failed:", e);
+      await db.from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancel_reason: "Card checkout could not start" }).eq("id", result.id);
+      return { error: "We couldn't open the card payment page. Try again, or choose cash or Zelle.", code: "CARD_ERROR" };
+    }
+    redirect(url);
+  }
+
   await sendOrderConfirmation(result.id);
   redirect(`/order/${result.order_number}?t=${result.token}`);
 }
@@ -94,4 +112,26 @@ export async function lookupPricing(rawPhone: string): Promise<{ tier: string; p
   const t = (data as unknown as { price_tiers: { name: string; pie_price_cents: number; is_active: boolean } | null } | null)?.price_tiers;
   if (!t || !t.is_active) return null;
   return { tier: t.name, pie_price_cents: t.pie_price_cents };
+}
+
+async function siteOrigin() {
+  const h = await headers();
+  return h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+}
+
+/** "Pay now" on the order page, for a card order whose payment page was closed before paying. */
+export async function resumeCardPayment(orderNumber: string, token: string): Promise<{ error: string } | void> {
+  await releaseExpiredCardHolds();
+  const db = createAdminClient();
+  const { data } = await db.from("orders").select("id, status").eq("order_number", orderNumber).eq("confirmation_token", token).maybeSingle();
+  if (!data) return { error: "We couldn't find that order." };
+  if (data.status !== "pending_payment") return { error: "This order isn't waiting for a card payment anymore. Refresh the page." };
+  let url: string;
+  try {
+    url = await createCheckoutForOrder(data.id, await siteOrigin());
+  } catch (e) {
+    console.error("stripe resume failed:", e);
+    return { error: "We couldn't open the payment page. Try again in a moment." };
+  }
+  redirect(url);
 }

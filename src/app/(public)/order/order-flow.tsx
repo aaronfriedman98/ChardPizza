@@ -342,7 +342,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   <PayOption on={payment === "zelle"} onClick={() => setPayment("zelle")} title="Zelle" sub={zelleText ?? "We'll send instructions."} />
                 )}
                 {s.cash_enabled && <PayOption on={payment === "cash"} onClick={() => setPayment("cash")} title="Cash" sub="Pay when you pick up." />}
-                {s.card_enabled && <PayOption on={payment === "card"} onClick={() => setPayment("card")} title="Card" sub="Pay now, securely." />}
+                {s.card_enabled && <PayOption on={payment === "card"} onClick={() => setPayment("card")} title="Card" sub="Apple Pay, Google Pay, or any card. Paid now on Stripe's secure page." />}
               </div>
             </div>
 
@@ -432,7 +432,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
             </button>
           ) : (
             <button onClick={submit} disabled={pending} className="btn-amber px-7">
-              {pending ? "Placing..." : "Place order"}
+              {payment === "card" ? (pending ? "Opening payment…" : "Pay by card") : pending ? "Placing..." : "Place order"}
             </button>
           )}
         </div>
