@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { createManualOrder, reviseOrder } from "./admin-order-actions";
 import { lookupCustomers, type CustomerHit } from "../customers/actions";
 import type { PriceTier } from "@/lib/types";
+import { tierLabel, tierPrice } from "@/lib/pricing";
 
 /**
  * One editor for both "new manual order" and "edit existing order".
@@ -51,7 +52,7 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
   const lines = Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => ({ item: byId.get(id)!, qty: q })).filter((l) => l.item);
   const units = lines.reduce((a, l) => a + l.item.capacity_units * l.qty, 0);
   const tier = tiers.find((t) => t.id === tierId) ?? null;
-  const priceOf = (item: (typeof lines)[number]["item"]) => (tier && item.capacity_units > 0 ? tier.pie_price_cents : item.price_cents);
+  const priceOf = (item: (typeof lines)[number]["item"]) => (tier && item.capacity_units > 0 ? tierPrice(tier, item.price_cents) : item.price_cents);
   const subtotal = lines.reduce((a, l) => a + priceOf(l.item) * l.qty, 0);
   const zone = data.zones.find((z) => z.id === zoneId) ?? null;
   const total = subtotal + (fulfillment === "delivery" && zone ? zone.fee_cents : 0);
@@ -236,7 +237,7 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
                 <option value="">Regular price</option>
                 {tiers.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name} · {formatCents(t.pie_price_cents)} per pie
+                    {t.name} · {tierLabel(t)}
                   </option>
                 ))}
               </select>

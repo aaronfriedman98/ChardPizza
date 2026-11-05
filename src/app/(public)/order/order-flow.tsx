@@ -7,6 +7,7 @@ import { LogoMark, Wordmark } from "@/components/brand/logo";
 import type { OrderingData, PublicSlot } from "@/lib/public";
 import { formatCents } from "@/lib/format";
 import { cardFeeCents, cardFeeLabel } from "@/lib/fees";
+import { tierLabel, tierPrice } from "@/lib/pricing";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 import { lookupPricing, placeOrder } from "./actions";
 
@@ -33,7 +34,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
   const [payment, setPayment] = useState<"cash" | "zelle" | "card">(s.zelle_enabled ? "zelle" : s.cash_enabled ? "cash" : "card");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [pricing, setPricing] = useState<{ tier: string; pie_price_cents: number } | null>(null);
+  const [pricing, setPricing] = useState<{ tier: string; pie_price_cents: number; discount_cents: number | null } | null>(null);
 
   // Special pricing tied to the phone number (family & friends).
   useEffect(() => {
@@ -62,7 +63,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
   );
   const units = lines.reduce((a, l) => a + l.item.capacity_units * l.qty, 0);
   const count = lines.reduce((a, l) => a + l.qty, 0);
-  const priceOf = (item: (typeof lines)[number]["item"]) => (pricing && item.capacity_units > 0 ? pricing.pie_price_cents : item.price_cents);
+  const priceOf = (item: (typeof lines)[number]["item"]) => (pricing && item.capacity_units > 0 ? tierPrice(pricing, item.price_cents) : item.price_cents);
   const subtotal = lines.reduce((a, l) => a + priceOf(l.item) * l.qty, 0);
   const zone = data.zones.find((z) => z.id === zoneId) ?? null;
   const deliveryFee = fulfillment === "delivery" && zone ? zone.fee_cents : 0;
@@ -379,7 +380,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   </li>
                 ))}
               </ul>
-              {pricing && <div className="mt-2 text-xs text-gold2">{pricing.tier} pricing applied: {formatCents(pricing.pie_price_cents)} per pie.</div>}
+              {pricing && <div className="mt-2 text-xs text-gold2">{pricing.tier} pricing applied: {tierLabel(pricing)}.</div>}
               <div className="mt-3 space-y-1 border-t border-goldline pt-3 text-sm text-flour/70">
                 <div className="flex justify-between">
                   <span>Subtotal</span>

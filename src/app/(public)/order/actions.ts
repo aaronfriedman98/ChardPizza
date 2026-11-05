@@ -105,14 +105,14 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
 }
 
 /** If this phone belongs to a customer with special pricing, return the per-pie price to show. */
-export async function lookupPricing(rawPhone: string): Promise<{ tier: string; pie_price_cents: number } | null> {
+export async function lookupPricing(rawPhone: string): Promise<{ tier: string; pie_price_cents: number; discount_cents: number | null } | null> {
   const phone = normalizePhone(rawPhone);
   if (!phone) return null;
   const db = createAdminClient();
-  const { data } = await db.from("customers").select("price_tiers!default_price_tier_id(name, pie_price_cents, is_active)").eq("phone", phone).maybeSingle();
-  const t = (data as unknown as { price_tiers: { name: string; pie_price_cents: number; is_active: boolean } | null } | null)?.price_tiers;
+  const { data } = await db.from("customers").select("price_tiers!default_price_tier_id(name, pie_price_cents, discount_cents, is_active)").eq("phone", phone).maybeSingle();
+  const t = (data as unknown as { price_tiers: { name: string; pie_price_cents: number; discount_cents: number | null; is_active: boolean } | null } | null)?.price_tiers;
   if (!t || !t.is_active) return null;
-  return { tier: t.name, pie_price_cents: t.pie_price_cents };
+  return { tier: t.name, pie_price_cents: t.pie_price_cents, discount_cents: t.discount_cents };
 }
 
 async function siteOrigin() {

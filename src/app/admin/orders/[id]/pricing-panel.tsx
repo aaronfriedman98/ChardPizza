@@ -6,6 +6,7 @@ import type { PriceTier } from "@/lib/types";
 import type { Order } from "@/lib/orders";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { applyPricing } from "../pricing-actions";
+import { tierLabel } from "@/lib/pricing";
 
 /** Order page: put a price tier or a one-off per-pie price on this order. */
 export function PricingPanel({ order: o, tiers }: { order: Order; tiers: PriceTier[] }) {
@@ -53,7 +54,7 @@ export function PricingPanel({ order: o, tiers }: { order: Order; tiers: PriceTi
                 onClick={() => run(t.id, null)}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium ${o.price_tier_id === t.id ? "bg-char text-white" : "border border-line hover:bg-cream"}`}
               >
-                {t.name} · {formatCents(t.pie_price_cents)}/pie
+                {t.name} · {tierLabel(t)}
               </button>
             ))}
           </div>

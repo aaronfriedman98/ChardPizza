@@ -3,10 +3,10 @@
 import { useBusyTransition } from "@/components/admin/feedback";
 import { useActionState, useEffect, useState } from "react";
 import { formatPhone } from "@/lib/format";
+import { tierLabel } from "@/lib/pricing";
 import { FormMessage, SubmitButton } from "@/components/ui/form-status";
 import { lookupCustomers, mergeCustomers, setCustomerTier, updateCustomer, type CustomerHit } from "./actions";
 import type { PriceTier } from "@/lib/types";
-import { formatCents } from "@/lib/format";
 
 export function CustomerForm({ customer }: { customer: { id: string; full_name: string; phone: string; email: string | null; notes: string | null } }) {
   const [state, action] = useActionState(updateCustomer.bind(null, customer.id), undefined);
@@ -110,7 +110,7 @@ export function TierPicker({ customerId, current, tiers }: { customerId: string;
             onClick={() => startTransition(async () => setMsg((await setCustomerTier(customerId, t.id)).ok ?? null))}
             className={`rounded-full px-3 py-1.5 text-sm font-medium ${current === t.id ? "bg-char text-white" : "border border-line hover:bg-cream"}`}
           >
-            {t.name} · {formatCents(t.pie_price_cents)}/pie
+            {t.name} · {tierLabel(t)}
           </button>
         ))}
       </div>

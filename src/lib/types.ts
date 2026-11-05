@@ -203,6 +203,8 @@ export interface PriceTier {
   id: string;
   name: string;
   pie_price_cents: number;
+  /** When set, the tier is "this much off the menu price" and pie_price_cents is ignored. */
+  discount_cents: number | null;
   is_active: boolean;
   sort_order: number;
 }

@@ -41,7 +41,8 @@ export async function applyPricing(orderId: string, tierId: string | null, overr
 const tierSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1, "Give the tier a name").max(60),
-  price: z.string().trim().min(1, "Price per pie is required"),
+  price: z.string().trim().min(1, "Enter an amount"),
+  mode: z.enum(["flat", "off"]).default("flat"),
   is_active: z.boolean(),
 });
 
@@ -49,9 +50,10 @@ export async function savePriceTier(input: unknown): Promise<Result> {
   const { supabase, admin } = await requireAdmin();
   const parsed = tierSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
-  const pie_price_cents = dollarsToCents(parsed.data.price);
-  if (pie_price_cents === null) return { error: "Price per pie should be a dollar amount like 20." };
-  const row = { name: parsed.data.name, pie_price_cents, is_active: parsed.data.is_active };
+  const amount = dollarsToCents(parsed.data.price);
+  if (amount === null) return { error: "Enter a dollar amount like 20 or 5." };
+  const off = parsed.data.mode === "off";
+  const row = { name: parsed.data.name, pie_price_cents: off ? 0 : amount, discount_cents: off ? amount : null, is_active: parsed.data.is_active };
   if (parsed.data.id) {
     const { error } = await supabase.from("price_tiers").update(row).eq("id", parsed.data.id);
     if (error) return { error: error.message };
