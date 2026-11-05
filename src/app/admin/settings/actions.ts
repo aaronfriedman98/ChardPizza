@@ -20,6 +20,8 @@ const settingsSchema = z.object({
   pickup_address: optText,
   pickup_instructions: optText,
   zelle_instructions: optText,
+  card_fee_pass_through: bool,
+  card_fee_percent: z.coerce.number().min(0).max(10),
   whatsapp_url: optText.pipe(z.string().url("WhatsApp link must be a full URL").nullable()),
   instagram_url: optText.pipe(z.string().url("Instagram link must be a full URL").nullable()),
   about_text: optText,
@@ -44,7 +46,8 @@ export async function updateSettings(_prev: Result | undefined, formData: FormDa
   const parsed = settingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
 
-  const values = parsed.data;
+  const { card_fee_pass_through, ...rest } = parsed.data;
+  const values = { ...rest, card_fee_mode: card_fee_pass_through ? ("pass_through" as const) : ("absorb" as const), card_fee_flat_cents: 0 };
   if (values.business_phone) {
     const phone = normalizePhone(values.business_phone);
     if (!phone) return { error: "Business phone should be a 10-digit US number." };

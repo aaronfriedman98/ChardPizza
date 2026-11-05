@@ -210,6 +210,12 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
                 <span>{formatCents(o.delivery_fee_cents)}</span>
               </div>
             )}
+            {o.processing_fee_cents > 0 && (
+              <div className="flex justify-between">
+                <span>Card processing fee</span>
+                <span>{formatCents(o.processing_fee_cents)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-1 text-lg font-bold text-flour">
               <span>Total</span>
               <span>{formatCents(o.total_cents)}</span>

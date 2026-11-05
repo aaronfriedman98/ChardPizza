@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
 import { sendOrderConfirmation } from "@/lib/email";
-import { createCheckoutForOrder, releaseExpiredCardHolds, stripeConfigured } from "@/lib/stripe";
+import { applyCardFee, createCheckoutForOrder, releaseExpiredCardHolds, stripeConfigured } from "@/lib/stripe";
 
 const schema = z.object({
   service_id: z.string().uuid(),
@@ -90,6 +90,7 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
     // Card: the order holds its slot as "awaiting payment"; the confirmation email goes out once Stripe says paid.
     let url: string;
     try {
+      await applyCardFee(result.id);
       url = await createCheckoutForOrder(result.id, await siteOrigin());
     } catch (e) {
       console.error("stripe checkout failed:", e);

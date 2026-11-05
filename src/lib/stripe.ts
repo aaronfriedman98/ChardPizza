@@ -2,6 +2,8 @@ import "server-only";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendOrderConfirmation } from "@/lib/email";
+import { cardFeeCents } from "@/lib/fees";
+import type { Settings } from "@/lib/types";
 
 /** Stripe Checkout keeps a session open at least 30 minutes; the order's slot is held a little longer. */
 const SESSION_MINUTES = 30;
@@ -25,6 +27,7 @@ type OrderForCheckout = {
   customer_email: string | null;
   delivery_fee_cents: number;
   delivery_zone_name: string | null;
+  processing_fee_cents: number;
   total_cents: number;
   services: { name: string; service_date: string };
   order_items: { item_name: string; quantity: number; unit_price_cents: number }[];
@@ -35,7 +38,7 @@ export async function createCheckoutForOrder(orderId: string, origin: string): P
   const db = createAdminClient();
   const { data, error } = await db
     .from("orders")
-    .select("id, order_number, status, confirmation_token, customer_email, delivery_fee_cents, delivery_zone_name, total_cents, services(name, service_date), order_items(item_name, quantity, unit_price_cents)")
+    .select("id, order_number, status, confirmation_token, customer_email, delivery_fee_cents, delivery_zone_name, processing_fee_cents, total_cents, services(name, service_date), order_items(item_name, quantity, unit_price_cents)")
     .eq("id", orderId)
     .single();
   if (error || !data) throw new Error("Order not found");
@@ -51,6 +54,13 @@ export async function createCheckoutForOrder(orderId: string, origin: string): P
     line_items.push({
       quantity: 1,
       price_data: { currency: "usd", unit_amount: o.delivery_fee_cents, product_data: { name: `Delivery${o.delivery_zone_name ? ` · ${o.delivery_zone_name}` : ""}` } },
+    });
+  }
+
+  if (o.processing_fee_cents > 0) {
+    line_items.push({
+      quantity: 1,
+      price_data: { currency: "usd", unit_amount: o.processing_fee_cents, product_data: { name: "Card processing fee" } },
     });
   }
 
@@ -79,6 +89,23 @@ export async function createCheckoutForOrder(orderId: string, origin: string): P
 
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return session.url;
+}
+
+/** Adds the customer-paid card fee (from Settings) to a freshly placed card order. place_order itself leaves it at 0. */
+export async function applyCardFee(orderId: string): Promise<void> {
+  const db = createAdminClient();
+  const [{ data: settings }, { data: order }] = await Promise.all([
+    db.from("settings").select("card_fee_mode, card_fee_percent, card_fee_flat_cents").eq("id", true).single(),
+    db.from("orders").select("subtotal_cents, delivery_fee_cents, processing_fee_cents").eq("id", orderId).single(),
+  ]);
+  if (!settings || !order || order.processing_fee_cents > 0) return;
+  const fee = cardFeeCents(order.subtotal_cents + order.delivery_fee_cents, settings as Settings);
+  if (fee <= 0) return;
+  await db
+    .from("orders")
+    .update({ processing_fee_cents: fee, total_cents: order.subtotal_cents + order.delivery_fee_cents + fee })
+    .eq("id", orderId)
+    .eq("status", "pending_payment");
 }
 
 /**

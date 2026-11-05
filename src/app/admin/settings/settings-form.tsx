@@ -84,6 +84,18 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
         <textarea name="zelle_instructions" defaultValue={s.zelle_instructions ?? ""} rows={3} className="input" />
       </Section>
 
+      <Section title="Card payments" hint="Stripe charges about 2.9% + 30¢ per card payment. Pass a fee on to the customer, or absorb it.">
+        <SwitchField
+          name="card_fee_pass_through"
+          defaultChecked={s.card_fee_mode === "pass_through"}
+          label="Customer pays a card fee"
+          hint="Added to card orders only, shown as its own line before they pay. Cash and Zelle are never charged."
+        />
+        <Field label="Card fee (%)">
+          <input name="card_fee_percent" type="number" step="0.1" min={0} max={10} defaultValue={Number(s.card_fee_percent)} className="input max-w-[8rem]" />
+        </Field>
+      </Section>
+
       <Section title="Service defaults" hint="Starting values for new services. Each service can override them.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Default slot length (minutes)">

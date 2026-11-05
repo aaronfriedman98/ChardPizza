@@ -91,6 +91,7 @@ function buildHtml(o: Order, s: Settings, intro: string, link: string) {
     <table style="width:100%;border-collapse:collapse;font-size:15px">${rows}
       <tr><td style="padding-top:10px;border-top:1px solid #e8e0d4">Subtotal</td><td style="padding-top:10px;border-top:1px solid #e8e0d4;text-align:right">${formatCents(o.subtotal_cents)}</td></tr>
       ${o.delivery_fee_cents ? `<tr><td>Delivery</td><td style="text-align:right">${formatCents(o.delivery_fee_cents)}</td></tr>` : ""}
+      ${o.processing_fee_cents ? `<tr><td>Card processing fee</td><td style="text-align:right">${formatCents(o.processing_fee_cents)}</td></tr>` : ""}
       <tr><td style="font-weight:700;font-size:17px;padding-top:6px">Total</td><td style="font-weight:700;font-size:17px;text-align:right;padding-top:6px">${formatCents(o.total_cents)}</td></tr>
     </table>
   </div>

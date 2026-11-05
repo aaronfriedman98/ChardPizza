@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { LogoMark, Wordmark } from "@/components/brand/logo";
 import type { OrderingData, PublicSlot } from "@/lib/public";
 import { formatCents } from "@/lib/format";
+import { cardFeeCents, cardFeeLabel } from "@/lib/fees";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 import { lookupPricing, placeOrder } from "./actions";
 
@@ -65,7 +66,8 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
   const subtotal = lines.reduce((a, l) => a + priceOf(l.item) * l.qty, 0);
   const zone = data.zones.find((z) => z.id === zoneId) ?? null;
   const deliveryFee = fulfillment === "delivery" && zone ? zone.fee_cents : 0;
-  const total = subtotal + deliveryFee;
+  const cardFee = payment === "card" ? cardFeeCents(subtotal + deliveryFee, data.settings) : 0;
+  const total = subtotal + deliveryFee + cardFee;
 
   const slotOk = (slot: PublicSlot) => !slot.is_blocked && (units === 0 || slot.remaining >= units);
   const chosenSlot = data.slots.find((x) => x.id === slotId) ?? null;
@@ -342,7 +344,14 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   <PayOption on={payment === "zelle"} onClick={() => setPayment("zelle")} title="Zelle" sub={zelleText ?? "We'll send instructions."} />
                 )}
                 {s.cash_enabled && <PayOption on={payment === "cash"} onClick={() => setPayment("cash")} title="Cash" sub="Pay when you pick up." />}
-                {s.card_enabled && <PayOption on={payment === "card"} onClick={() => setPayment("card")} title="Card" sub="Apple Pay, Google Pay, or any card. Paid now on Stripe's secure page." />}
+                {s.card_enabled && (
+                  <PayOption
+                    on={payment === "card"}
+                    onClick={() => setPayment("card")}
+                    title="Card"
+                    sub={`Apple Pay, Google Pay, or any card, paid now on Stripe’s secure page.${data.settings.card_fee_mode === "pass_through" ? ` Adds a ${cardFeeLabel(data.settings)} (${formatCents(cardFeeCents(subtotal + deliveryFee, data.settings))}).` : ""}`}
+                  />
+                )}
               </div>
             </div>
 
@@ -380,6 +389,12 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   <div className="flex justify-between">
                     <span>Delivery · {zone?.name}</span>
                     <span>{formatCents(deliveryFee)}</span>
+                  </div>
+                )}
+                {cardFee > 0 && (
+                  <div className="flex justify-between">
+                    <span>{cardFeeLabel(data.settings)}</span>
+                    <span>{formatCents(cardFee)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-1 text-lg font-bold text-flour">
