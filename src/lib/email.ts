@@ -59,9 +59,10 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
     const subject = renderMessage(template.subject ?? `Your ${settings.business_name} order {{order_number}}`, vars);
     const intro = renderMessage(template.body, vars);
     const html = buildHtml(o, settings, intro, vars.order_link);
+    const text = buildText(o, settings, intro, vars.order_link);
     const from = process.env.EMAIL_FROM ?? (gmailConfigured() ? `${settings.business_name} <${process.env.GMAIL_USER}>` : `${settings.business_name} <onboarding@resend.dev>`);
 
-    const { id, error } = await deliver({ from, to: o.customer_email, subject, html, text: intro, replyTo: settings.business_email ?? undefined });
+    const { id, error } = await deliver({ from, to: o.customer_email, subject, html, text, replyTo: settings.business_email ?? undefined });
 
     await db.from("notifications").insert({
       order_id: o.id,
@@ -83,6 +84,37 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
 
 function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+}
+
+// Plain-text twin of the HTML receipt. Spam filters distrust a one-line text part next to a full HTML one.
+function buildText(o: Order, s: Settings, intro: string, link: string) {
+  const tz = s.time_zone;
+  const lines = [
+    `${s.business_name} - order ${o.order_number}`,
+    `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDateOnly(o.scheduled_at.slice(0, 10), "EEEE, MMMM d")} at ${fmtTime(o.scheduled_at, tz)}`,
+    "",
+    intro,
+    "",
+    ...o.order_items.map((it) => `${it.quantity} x ${it.item_name}  ${formatCents(it.line_total_cents)}`),
+    `Subtotal  ${formatCents(o.subtotal_cents)}`,
+    ...(o.delivery_fee_cents ? [`Delivery  ${formatCents(o.delivery_fee_cents)}`] : []),
+    ...(o.processing_fee_cents ? [`Card processing fee  ${formatCents(o.processing_fee_cents)}`] : []),
+    `Total  ${formatCents(o.total_cents)}`,
+    "",
+    o.fulfillment === "delivery"
+      ? `Delivering to: ${[o.address_line1, o.address_line2, o.address_city].filter(Boolean).join(", ")}`
+      : `Pickup at: ${s.pickup_address ?? ""}${s.pickup_instructions ? `
+${s.pickup_instructions}` : ""}`,
+    "",
+    `Payment: ${o.payment_status === "paid" ? "Paid. Thank you!" : o.payment_method === "zelle" ? (s.zelle_instructions ?? "Pay by Zelle before pickup.") : o.payment_method === "cash" ? "Cash due at pickup." : ""}`,
+    ...(o.special_instructions ? ["", `Your note: ${o.special_instructions}`] : []),
+    "",
+    `Order status: ${link}`,
+    "",
+    `${s.business_name}${s.business_email ? " - " + s.business_email : ""}`,
+  ];
+  return lines.join("
+");
 }
 
 function buildHtml(o: Order, s: Settings, intro: string, link: string) {
