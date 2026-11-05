@@ -91,9 +91,15 @@ export function SettingsForm({ settings: s }: { settings: Settings }) {
           label="Customer pays a card fee"
           hint="Added to card orders only, shown as its own line before they pay. Cash and Zelle are never charged."
         />
-        <Field label="Card fee (%)">
-          <input name="card_fee_percent" type="number" step="0.1" min={0} max={10} defaultValue={Number(s.card_fee_percent)} className="input max-w-[8rem]" />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Card fee (%)">
+            <input name="card_fee_percent" type="number" step="0.1" min={0} max={10} defaultValue={Number(s.card_fee_percent)} className="input" />
+          </Field>
+          <Field label="Plus a flat amount (cents)">
+            <input name="card_fee_flat_cents" type="number" min={0} max={100} defaultValue={s.card_fee_flat_cents} className="input" />
+          </Field>
+        </div>
+        <p className="text-xs text-ink/50">To break even exactly on Stripe&rsquo;s 2.9% + 30&cent;, use 3% + 31&cent;. A plain 4% also covers it on orders over about $30.</p>
       </Section>
 
       <Section title="Service defaults" hint="Starting values for new services. Each service can override them.">
