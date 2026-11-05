@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
-import { sendOrderConfirmation } from "@/lib/email";
+import { notifyOwnerNewOrder, sendOrderConfirmation } from "@/lib/email";
 import { applyCardFee, createCheckoutForOrder, releaseExpiredCardHolds, stripeConfigured } from "@/lib/stripe";
 
 const schema = z.object({
@@ -100,7 +100,7 @@ export async function placeOrder(raw: PlaceOrderInput): Promise<PlaceOrderResult
     redirect(url);
   }
 
-  await sendOrderConfirmation(result.id);
+  await Promise.all([sendOrderConfirmation(result.id), notifyOwnerNewOrder(result.id)]);
   redirect(`/order/${result.order_number}?t=${result.token}`);
 }
 

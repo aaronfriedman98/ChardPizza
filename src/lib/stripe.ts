@@ -1,7 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendOrderConfirmation } from "@/lib/email";
+import { notifyOwnerNewOrder, sendOrderConfirmation } from "@/lib/email";
 import { cardFeeCents } from "@/lib/fees";
 import type { Settings } from "@/lib/types";
 
@@ -146,7 +146,7 @@ export async function settleCheckoutSession(sessionId: string): Promise<{ orderI
     .update({ payment_status: "paid", status, expires_at: null, cancelled_at: null, cancel_reason: null })
     .eq("id", orderId);
 
-  await sendOrderConfirmation(orderId);
+  await Promise.all([sendOrderConfirmation(orderId), notifyOwnerNewOrder(orderId)]);
   return { orderId, paid: true };
 }
 

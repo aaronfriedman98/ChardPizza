@@ -82,6 +82,52 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
   }
 }
 
+/**
+ * Heads-up to the business inbox for every new website order (cash, Zelle, or a settled card).
+ * Fire-and-forget: never throws, never blocks the customer.
+ */
+export async function notifyOwnerNewOrder(orderId: string): Promise<void> {
+  const db = createAdminClient();
+  try {
+    const [{ data: orderRow }, { data: settingsRow }] = await Promise.all([
+      db.from("orders").select("*, order_items(id, item_name, quantity, unit_price_cents, line_total_cents, capacity_units_each)").eq("id", orderId).single(),
+      db.from("settings").select("*").eq("id", true).single(),
+    ]);
+    if (!orderRow || !settingsRow) return;
+    const o = orderRow as Order;
+    const s = settingsRow as Settings;
+    const to = s.business_email;
+    if (!to || !(gmailConfigured() || process.env.RESEND_API_KEY)) return;
+
+    const tz = s.time_zone;
+    const when = `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDateOnly(o.scheduled_at.slice(0, 10), "EEE MMM d")} at ${fmtTime(o.scheduled_at, tz)}`;
+    const items = o.order_items.map((it) => `${it.quantity} × ${it.item_name}`).join(", ");
+    const pay = o.payment_status === "paid" ? `PAID by ${o.payment_method}` : `${o.payment_method} · not paid yet`;
+    const where = o.fulfillment === "delivery" ? [o.address_line1, o.address_line2, o.address_city].filter(Boolean).join(", ") : "";
+    const adminLink = `${s.public_url.replace(/\/+$/, "")}/admin/orders/${o.id}`;
+    const subject = `New order ${o.order_number}: ${items} (${formatCents(o.total_cents)})`;
+    const lines = [
+      `${o.customer_name} · ${o.customer_phone}${o.customer_email ? ` · ${o.customer_email}` : ""}`,
+      when,
+      items,
+      `Total ${formatCents(o.total_cents)} · ${pay}`,
+      ...(where ? [`Address: ${where}${o.address_notes ? ` (${o.address_notes})` : ""}`] : []),
+      ...(o.special_instructions ? [`Note: ${o.special_instructions}`] : []),
+      "",
+      adminLink,
+    ];
+    const text = lines.join("\n");
+    const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;color:#2a2321">${lines
+      .map((l) => (l === adminLink ? `<a href="${adminLink}">Open in admin</a>` : esc(l) || "<br>"))
+      .join("<br>")}</div>`;
+    const from = process.env.EMAIL_FROM ?? (gmailConfigured() ? `${s.business_name} <${process.env.GMAIL_USER}>` : `${s.business_name} <onboarding@resend.dev>`);
+    const { error } = await deliver({ from, to, subject, html, text });
+    if (error) console.error("owner alert failed:", error);
+  } catch (e) {
+    console.error("notifyOwnerNewOrder failed:", e);
+  }
+}
+
 function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
