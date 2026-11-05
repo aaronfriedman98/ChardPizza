@@ -45,8 +45,10 @@ function hoursRange(startIso: string, endIso: string, tz: string) {
   return `${aM === bM ? aT : a}–${b}`;
 }
 
-export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
+export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const { id } = await ctx.params;
+  // ?back=1 swaps the "SATURDAY / PIZZA" headline for a one-off "WE'RE BACK." comeback poster.
+  const back = new URL(req.url).searchParams.get("back") === "1";
   const db = createAdminClient();
   const [{ data: serviceRow }, { data: settingsRow }, { data: smi }, { data: sz }] = await Promise.all([
     db.from("services").select("*").eq("id", id).maybeSingle(),
@@ -108,8 +110,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
     QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: INK, light: AMBER } }),
     posterDataUri(),
   ]);
-  const day = fmtDateOnly(s.service_date, "EEEE").toUpperCase();
-  const dateLine = `${fmtDateOnly(s.service_date, "MMM d").toUpperCase()}  ·  ${hoursRange(s.starts_at, s.ends_at, tz)}`;
+  const day = back ? "WE’RE" : fmtDateOnly(s.service_date, "EEEE").toUpperCase();
+  const big = back ? "BACK." : "PIZZA";
+  const dateLine = back
+    ? `${fmtDateOnly(s.service_date, "EEE MMM d").toUpperCase()} · ${hoursRange(s.starts_at, s.ends_at, tz)}`
+    : `${fmtDateOnly(s.service_date, "MMM d").toUpperCase()}  ·  ${hoursRange(s.starts_at, s.ends_at, tz)}`;
   const dayFs = Math.min(tight ? 170 : 200, Math.floor(1560 / Math.max(day.length, 6)));
   const pizzaFs = tight ? 230 : 270;
   const label = { fontSize: 18, fontWeight: 700, letterSpacing: 6, color: AMBER } as const;
@@ -130,26 +135,27 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={uri(logoMarkSvgString(78, BRICK))} width={78} height={55} alt="" />
           <div style={{ fontFamily: "Anton", fontSize: 44, marginLeft: 14, marginTop: 6, letterSpacing: 1 }}>{"CHAR’D"}</div>
-          <div style={{ marginLeft: "auto", fontSize: 17, fontWeight: 700, letterSpacing: 6, color: AMBER }}>WOOD-FIRED · SOUTHFIELD</div>
+          <div style={{ marginLeft: "auto", fontSize: 17, fontWeight: 700, letterSpacing: 6, color: AMBER }}>NEW HAVEN STYLE · SOUTHFIELD</div>
         </div>
 
         {/* stamped headline */}
-        <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: `${tight ? 36 : 64}px 58px 0 58px` }}>
+        <div style={{ display: "flex", flexDirection: "column", position: "relative", padding: `${back ? 16 : tight ? 36 : 64}px 58px 0 58px` }}>
           <div style={{ fontFamily: "Anton", fontSize: dayFs, lineHeight: 0.9, color: AMBER, letterSpacing: 2 }}>{day}</div>
-          <div style={{ fontFamily: "Anton", fontSize: pizzaFs, lineHeight: 0.86, color: CREAM, letterSpacing: 4, marginTop: 4 }}>PIZZA</div>
+          <div style={{ fontFamily: "Anton", fontSize: pizzaFs, lineHeight: 0.86, color: CREAM, letterSpacing: 4, marginTop: 4 }}>{big}</div>
+          {back && <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: 7, color: AMBER, marginTop: 8, marginLeft: 6 }}>THE OVEN IS LIT AGAIN</div>}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={distress(W, 520, CHAR, 7, 1.4)} width={W} height={520} alt="" style={{ position: "absolute", top: 40, left: 0 }} />
         </div>
 
         {/* date on a brush stroke */}
-        <div style={{ display: "flex", position: "relative", width: 640, height: 92, marginLeft: 44, marginTop: 18, transform: "rotate(-2deg)", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", position: "relative", width: back ? 760 : 640, height: 92, marginLeft: 44, marginTop: back ? 10 : 18, transform: "rotate(-2deg)", alignItems: "center", justifyContent: "center" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={brush(640, 92, AMBER)} width={640} height={92} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
-          <div style={{ fontFamily: "Anton", fontSize: 50, color: INK, letterSpacing: 3 }}>{dateLine}</div>
+          <img src={brush(back ? 760 : 640, 92, AMBER)} width={back ? 760 : 640} height={92} alt="" style={{ position: "absolute", top: 0, left: 0 }} />
+          <div style={{ fontFamily: "Anton", fontSize: back ? 46 : 50, color: INK, letterSpacing: 3 }}>{dateLine}</div>
         </div>
 
         {/* menu */}
-        <div style={{ display: "flex", flexDirection: "column", padding: "40px 64px 0 64px" }}>
+        <div style={{ display: "flex", flexDirection: "column", padding: `${back ? 24 : 40}px 64px 0 64px` }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={label}>THE PIES</div>
             <div style={{ flex: 1, height: 2, backgroundColor: BRICK, margin: "0 20px", opacity: 0.8 }} />
@@ -208,7 +214,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/flyer/[id]">) {
         { name: "Karla", data: karla, weight: 400, style: "normal" },
         { name: "Karla", data: karlaBold, weight: 700, style: "normal" },
       ],
-      headers: { "Cache-Control": "no-store", "Content-Disposition": 'inline; filename="chard-pizza-flyer.png"' },
+      headers: { "Cache-Control": "no-store", "Content-Disposition": `inline; filename="${back ? "chard-were-back" : "chard-pizza-flyer"}.png"` },
     },
   );
 }

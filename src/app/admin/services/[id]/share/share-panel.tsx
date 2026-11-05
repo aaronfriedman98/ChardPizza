@@ -9,7 +9,8 @@ export function SharePanel({ serviceId, initialMessage, orderUrl }: { serviceId:
   const [message, setMessage] = useState(initialMessage);
   const [job, setJob] = useState<Job>(null);
   const [loaded, setLoaded] = useState(false);
-  const flyerUrl = `/flyer/${serviceId}`;
+  const [back, setBack] = useState(false);
+  const flyerUrl = `/flyer/${serviceId}${back ? "?back=1" : ""}`;
   const canShareFiles = typeof navigator !== "undefined" && typeof navigator.canShare === "function";
 
   async function copy(text: string, what: string) {
@@ -55,7 +56,7 @@ export function SharePanel({ serviceId, initialMessage, orderUrl }: { serviceId:
         const blob = await fetchFlyer();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "chard-pizza-flyer.png";
+        a.download = back ? "chard-were-back.png" : "chard-pizza-flyer.png";
         a.click();
         URL.revokeObjectURL(a.href);
       } catch {
@@ -122,11 +123,29 @@ export function SharePanel({ serviceId, initialMessage, orderUrl }: { serviceId:
       </div>
 
       <section className="card space-y-3">
-        <h2 className="text-lg font-bold">Flyer</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">Flyer</h2>
+          <div className="flex rounded-lg border border-line bg-white p-0.5 text-sm">
+            {([false, true] as const).map((v) => (
+              <button
+                key={String(v)}
+                type="button"
+                onClick={() => {
+                  if (v !== back) setLoaded(false);
+                  setBack(v);
+                }}
+                className={`rounded-md px-2.5 py-1 font-medium ${back === v ? "bg-char text-white" : "text-ink/70"}`}
+              >
+                {v ? "We’re back" : "Regular"}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="relative overflow-hidden rounded-xl border border-line bg-char" style={{ aspectRatio: "1080 / 1350" }}>
           {!loaded && <div className="skeleton absolute inset-0" />}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            key={flyerUrl}
             src={flyerUrl}
             alt="Flyer preview"
             onLoad={() => setLoaded(true)}
