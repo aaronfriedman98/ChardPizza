@@ -89,6 +89,8 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
   const more = pies.length - shown.length;
   const uniform = pies.length > 0 && new Set(pies.map((p) => p.price_cents)).size === 1 ? `${money(pies[0].price_cents)} A PIE` : null;
   const tight = shown.length >= 3 || sides.length > 0 || more > 0;
+  // The comeback headline block is taller, so long menu copy gets trimmed to keep the order strip on the page.
+  const descCap = back && shown.reduce((a, p) => a + p.description.length, 0) > 420 ? 150 : null;
 
   const zones = ((sz ?? []) as unknown as { delivery_zones: Pick<DeliveryZone, "name"> }[]).map((z) => z.delivery_zones.name);
   const url = orderUrl(settings, "flyer");
@@ -175,7 +177,7 @@ export async function GET(req: Request, ctx: RouteContext<"/flyer/[id]">) {
                 {!uniform && <div style={{ marginLeft: "auto", fontFamily: "Anton", fontSize: tight ? 40 : 48, color: AMBER }}>{money(p.price_cents)}</div>}
               </div>
               {p.description && (
-                <div style={{ fontSize: tight ? 20 : 23, lineHeight: 1.35, color: CREAM2, marginTop: 6, maxWidth: 900 }}>{tight ? clip(p.description, 88) : p.description}</div>
+                <div style={{ fontSize: tight ? 20 : 23, lineHeight: 1.35, color: CREAM2, marginTop: 6, maxWidth: 900 }}>{tight ? clip(p.description, 88) : descCap ? clip(p.description, descCap) : p.description}</div>
               )}
             </div>
           ))}
