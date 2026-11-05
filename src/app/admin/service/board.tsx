@@ -123,6 +123,10 @@ export function ServiceBoard({
             <Link href={`/admin/orders/new?service=${s.id}`} className="text-ember hover:underline">
               + manual order
             </Link>
+            {" · "}
+            <Link href="/admin/guide" className="text-ember hover:underline">
+              how this works
+            </Link>
             {candidates.length > 1 && (
               <>
                 {" · "}

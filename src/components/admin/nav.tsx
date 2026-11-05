@@ -18,6 +18,7 @@ export const NAV = [
   { href: "/admin/account", label: "Account", icon: "🏦" },
   { href: "/admin/reports", label: "Reports", icon: "▥" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
+  { href: "/admin/guide", label: "How-to guide", icon: "?" },
 ];
 
 /** The four that matter mid-service get their own tab; everything else lives under More. */

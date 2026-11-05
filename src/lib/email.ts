@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Settings } from "@/lib/types";
 import type { Order } from "@/lib/orders";
@@ -7,12 +8,37 @@ import { messageVars, renderMessage } from "@/lib/messages";
 import { formatCents } from "@/lib/format";
 import { fmtDateOnly, fmtTime } from "@/lib/time";
 
+// Gmail (app password) first, since it needs no domain; Resend as the fallback.
+function gmailConfigured() {
+  return !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+}
+
+async function deliver(msg: { from: string; to: string; subject: string; html: string; text: string; replyTo?: string }): Promise<{ id: string | null; error: string | null }> {
+  if (gmailConfigured()) {
+    const transport = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+    });
+    try {
+      const info = await transport.sendMail(msg);
+      return { id: info.messageId ?? null, error: null };
+    } catch (e) {
+      return { id: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { data, error } = await resend.emails.send(msg);
+  return { id: data?.id ?? null, error: error?.message ?? null };
+}
+
 /**
- * Sends the order confirmation email if we can: needs RESEND_API_KEY and a customer email.
+ * Sends the order confirmation email if we can: needs Gmail or Resend credentials and a customer email.
  * Never throws; logs to `notifications` either way so the order page shows what happened.
  */
 export async function sendOrderConfirmation(orderId: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || (gmailConfigured() ? "gmail" : undefined);
   const db = createAdminClient();
   try {
     const [{ data: orderRow }, { data: settingsRow }, { data: template }] = await Promise.all([
@@ -25,7 +51,7 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
     const settings = settingsRow as Settings;
     if (!o.customer_email || !template || !template.is_active) return;
     if (!apiKey) {
-      console.warn("RESEND_API_KEY missing; skipping confirmation email for", o.order_number);
+      console.warn("No email credentials (GMAIL_APP_PASSWORD or RESEND_API_KEY); skipping confirmation email for", o.order_number);
       return;
     }
 
@@ -33,10 +59,9 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
     const subject = renderMessage(template.subject ?? `Your ${settings.business_name} order {{order_number}}`, vars);
     const intro = renderMessage(template.body, vars);
     const html = buildHtml(o, settings, intro, vars.order_link);
-    const from = process.env.EMAIL_FROM ?? `${settings.business_name} <onboarding@resend.dev>`;
+    const from = process.env.EMAIL_FROM ?? (gmailConfigured() ? `${settings.business_name} <${process.env.GMAIL_USER}>` : `${settings.business_name} <onboarding@resend.dev>`);
 
-    const resend = new Resend(apiKey);
-    const { data, error } = await resend.emails.send({ from, to: o.customer_email, subject, html, text: intro });
+    const { id, error } = await deliver({ from, to: o.customer_email, subject, html, text: intro, replyTo: settings.business_email ?? undefined });
 
     await db.from("notifications").insert({
       order_id: o.id,
@@ -47,8 +72,8 @@ export async function sendOrderConfirmation(orderId: string): Promise<void> {
       subject,
       rendered_body: intro,
       status: error ? "failed" : "sent",
-      provider_message_id: data?.id ?? null,
-      error: error?.message ?? null,
+      provider_message_id: id,
+      error,
       sent_at: error ? null : new Date().toISOString(),
     });
   } catch (e) {
