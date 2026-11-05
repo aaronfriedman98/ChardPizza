@@ -115,6 +115,44 @@ export default async function PartnerPage({ params }: PageProps<"/partner/[token
             </div>
           </div>
 
+          <div className="panel p-5">
+            <div className="flex items-baseline justify-between">
+              <div className="eyebrow">Every order</div>
+              <span className="text-[11px] uppercase tracking-[0.2em] text-flour2/60">by time</span>
+            </div>
+            {live.length === 0 ? (
+              <p className="mt-3 text-flour2">No orders yet.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-goldline">
+                {[...live]
+                  .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at) || a.created_at.localeCompare(b.created_at))
+                  .map((o) => {
+                    const state = o.status === "completed" ? "Done" : o.status === "ready" ? "Ready" : o.status === "out_for_delivery" ? "On the way" : null;
+                    return (
+                      <li key={o.id} className="py-2.5">
+                        <div className="flex items-baseline gap-3">
+                          <span className="w-[76px] shrink-0 whitespace-nowrap font-display text-[17px] leading-none text-gold2 tabular-nums">{fmtTime(o.scheduled_at, tz)}</span>
+                          <span className="min-w-0 flex-1 truncate font-semibold text-flour">{o.customer_name}</span>
+                          <span className="shrink-0 font-semibold text-flour tabular-nums">{formatCents(o.total_cents)}</span>
+                        </div>
+                        <div className="pl-[80px] text-[14px] leading-snug text-flour2">
+                          {o.order_items.map((it) => `${it.quantity}× ${it.item_name}`).join(", ")}
+                          {o.fulfillment === "delivery" && " · delivery"}
+                          {o.price_tier_id && ` · ${o.price_tiers?.name ?? "special price"}`}
+                        </div>
+                        <div className="pl-[80px] text-[11px] uppercase tracking-wide">
+                          <span className={o.payment_status === "paid" ? "text-green-400" : "text-gold2"}>
+                            {o.payment_status === "paid" ? `paid · ${o.payment_method}` : o.payment_method === "cash" ? "cash due" : o.payment_method === "zelle" ? "zelle due" : "unpaid"}
+                          </span>
+                          {state && <span className="text-flour2/70"> · {state}</span>}
+                        </div>
+                      </li>
+                    );
+                  })}
+              </ul>
+            )}
+          </div>
+
           <p className="text-center text-[12px] uppercase tracking-[0.2em] text-flour2/50">Refreshes on its own every 30 seconds</p>
         </section>
       )}
