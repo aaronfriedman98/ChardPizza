@@ -169,7 +169,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 {fmtDateOnly(s.service_date, "MMMM d")}
               </h2>
               <div className="mt-4 text-[15px] leading-7 text-flour2">
-                Pickup {fmtTime(s.starts_at, tz)} – {fmtTime(s.ends_at, tz)}
+                {s.pickup_enabled && s.delivery_enabled ? "Pickup or delivery" : s.delivery_enabled ? "Delivery" : "Pickup"} {fmtTime(s.starts_at, tz)} – {fmtTime(s.ends_at, tz)}
                 {settings.pickup_address && (
                   <>
                     <br />
@@ -215,7 +215,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
           <div>
             <Reveal className="flex items-baseline justify-between">
-              <div className="eyebrow">Tonight&rsquo;s menu</div>
+              <div className="eyebrow">{fmtDateOnly(s.service_date, "EEEE")}&rsquo;s menu</div>
               <span className="text-[11px] uppercase tracking-[0.2em] text-flour2/70">16&rdquo; pies</span>
             </Reveal>
             <ul className="mt-2">

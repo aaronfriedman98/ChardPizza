@@ -193,7 +193,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
           <section key="s1" className="slide-in space-y-4">
             <div>
               <div className="text-sm text-flour/60">
-                {fmtDateOnly(s.service_date, "EEEE, MMMM d")} · pickup {fmtTime(s.starts_at, tz)} to {fmtTime(s.ends_at, tz)}
+                {fmtDateOnly(s.service_date, "EEEE, MMMM d")} · {s.pickup_enabled && s.delivery_enabled ? "pickup or delivery" : s.delivery_enabled ? "delivery" : "pickup"} {fmtTime(s.starts_at, tz)} to {fmtTime(s.ends_at, tz)}
               </div>
               <h1 className="font-display text-[40px] font-medium leading-none text-flour">What are you having?</h1>
             </div>
@@ -296,7 +296,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                   {units > 0 ? `Times that can fit ${units} ${units === 1 ? "pizza" : "pizzas"}.` : "Pick a window."}
                 </p>
               </div>
-              {data.slots.length === 0 && <p className="text-flour/70">No times left tonight.</p>}
+              {data.slots.length === 0 && <p className="text-flour/70">No times left for this sale.</p>}
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {data.slots.map((slot) => {
                   const ok = slotOk(slot);
@@ -331,10 +331,10 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
         {step === 3 && (
           <section key="s3" className="slide-in space-y-6">
             <div className="space-y-3">
-              <h2 className="font-display text-[34px] font-medium leading-none">Who&rsquo;s picking up?</h2>
+              <h2 className="font-display text-[34px] font-medium leading-none">{fulfillment === "delivery" ? "Who’s it for?" : "Who’s picking up?"}</h2>
               <input className="field" placeholder="Your name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} autoComplete="name" />
               <input className="field" type="tel" placeholder="Phone number" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} autoComplete="tel" inputMode="tel" />
-              <input className="field" type="email" placeholder="Email (for your confirmation)" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} autoComplete="email" inputMode="email" />
+              <input className="field" type="email" placeholder="Email (optional)" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} autoComplete="email" inputMode="email" />
             </div>
 
             <div className="space-y-3">

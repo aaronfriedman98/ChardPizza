@@ -150,7 +150,7 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
                 <PayNow orderNumber={o.order_number} token={t} />
               </>
             )}
-            {o.payment_method === "card" && o.payment_status === "paid" && <p className="mt-2 text-flour/85">Paid by card. YouPaid by card. A receipt is on its way to your email.rsquo;re all set.</p>}
+            {o.payment_method === "card" && o.payment_status === "paid" && <p className="mt-2 text-flour/85">Paid by card. You&rsquo;re all set.</p>}
           </div>
         )}
 

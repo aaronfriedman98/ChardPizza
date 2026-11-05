@@ -39,7 +39,7 @@ const FRIENDLY: Record<string, string> = {
   ORDERING_CLOSED: "Ordering just closed. Sorry!",
   ORDERING_PAUSED: "Ordering is paused for a few minutes. Try again shortly.",
   ORDERING_NOT_OPEN: "Ordering has not opened yet.",
-  SOLD_OUT: "We just sold out of pizza spots for tonight.",
+  SOLD_OUT: "We just sold out for this sale.",
   SLOT_FULL: "That time just filled up. Pick another one.",
   ITEM_SOLD_OUT: "One of your items just sold out.",
 };

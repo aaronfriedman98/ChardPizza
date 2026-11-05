@@ -13,8 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://chardpizza.netlify.app"),
   title: "Char'd Pizza",
-  description: "Wood-fired pizza, made to order.",
+  description: "Thin, crispy, New Haven-style pizza from Southfield, Michigan. Made to order on sale nights.",
+  openGraph: {
+    title: "Char'd Pizza",
+    description: "Thin, crispy, New Haven-style pizza from Southfield, Michigan. Made to order on sale nights.",
+    siteName: "Char'd Pizza",
+    type: "website",
+    images: [{ url: "/media/hero-oven.jpg", width: 1280, height: 720, alt: "The Char'd oven" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
