@@ -8,6 +8,7 @@ import { formatCents, formatPhone } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { markPaid, markUnpaid, movePriority, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
 import { ConfirmText, PriceText, QuickSend } from "@/components/admin/quick-send";
+import { ChangePies } from "@/components/admin/change-pies";
 import { Spinner, beginBusy, endBusy, toast } from "@/components/admin/feedback";
 
 type Thresholds = Settings;
@@ -179,6 +180,7 @@ export function OrderCard({
           <ConfirmText order={o} settings={thresholds} />
           <PriceText order={o} settings={thresholds} />
           <QuickSend order={o} settings={thresholds} />
+          {mode === "board" && <ChangePies order={o} />}
           {paid && mode === "board" && (
             <Btn onClick={() => confirm("Undo Mark Paid on this order?") && run(() => markUnpaid(o.id))}>Undo paid</Btn>
           )}

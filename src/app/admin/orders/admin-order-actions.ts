@@ -8,6 +8,8 @@ import { audit } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/format";
 import { sendOrderConfirmation } from "@/lib/email";
+import { getOrderingData } from "@/lib/public";
+import { fmtTime } from "@/lib/time";
 
 export type Result = { error?: string; code?: string };
 
@@ -151,4 +153,68 @@ export async function reviseOrder(raw: ReviseOrderInput): Promise<Result | void>
   touch();
   revalidatePath(`/admin/orders/${v.order_id}`);
   redirect(`/admin/orders/${v.order_id}`);
+}
+
+// ---------- Quick "change pies" from the order card ----------
+
+export type QuickEditData = {
+  items: { smi_id: string; name: string; price_cents: number; capacity_units: number; qty: number }[];
+  slot_label: string;
+  /** Pizza spots at this order's time if the order were empty (its own pies count as free). */
+  slot_room: number;
+  own_units: number;
+};
+
+export async function getQuickEdit(orderId: string): Promise<QuickEditData | { error: string }> {
+  await requireAdmin();
+  const db = createAdminClient();
+  const { data: o } = await db
+    .from("orders")
+    .select("id, service_id, time_slot_id, capacity_units, status, order_items(service_menu_item_id, item_name, quantity)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!o) return { error: "Order not found." };
+  if (o.status === "completed" || o.status === "cancelled") return { error: `This order is ${o.status}.` };
+  const ordering = await getOrderingData(o.service_id);
+  if (!ordering) return { error: "Couldn't load tonight's menu." };
+  const have = new Map<string, number>();
+  for (const it of o.order_items as { service_menu_item_id: string | null; item_name: string; quantity: number }[]) {
+    const id = it.service_menu_item_id ?? ordering.items.find((i) => i.name === it.item_name)?.smi_id;
+    if (id) have.set(id, (have.get(id) ?? 0) + it.quantity);
+  }
+  const slot = ordering.slots.find((s) => s.id === o.time_slot_id);
+  const own = Number(o.capacity_units);
+  return {
+    items: ordering.items.map((i) => ({ smi_id: i.smi_id, name: i.name, price_cents: i.price_cents, capacity_units: i.capacity_units, qty: have.get(i.smi_id) ?? 0 })),
+    slot_label: slot ? fmtTime(slot.slot_start, ordering.settings.time_zone) : "this time",
+    slot_room: Math.max((slot?.remaining ?? 0) + own, 0),
+    own_units: own,
+  };
+}
+
+const quickSchema = z.object({ order_id: z.string().uuid(), items: itemsSchema, capacity_override: z.boolean().default(false) });
+
+export async function quickChangeItems(raw: z.input<typeof quickSchema>): Promise<Result & { total_cents?: number; owed_cents?: number; refund_cents?: number }> {
+  const { admin } = await requireAdmin();
+  const parsed = quickSchema.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the pies.", code: "INVALID" };
+  const v = parsed.data;
+  const db = createAdminClient();
+  // Only items change: revise_order keeps the time, contact, delivery and payment method as they are.
+  const { error } = await db.rpc("revise_order", {
+    payload: { order_id: v.order_id, admin_id: admin.id, items: v.items, capacity_override: v.capacity_override },
+  });
+  if (error) return mapError(error.message);
+  const { data: after } = await db.from("orders").select("total_cents, price_tier_id, pie_price_override_cents, pricing_note").eq("id", v.order_id).single();
+  let total = after?.total_cents ?? 0;
+  if (after && (after.price_tier_id || after.pie_price_override_cents != null)) {
+    await db.rpc("apply_order_pricing", { payload: { order_id: v.order_id, admin_id: admin.id, tier_id: after.price_tier_id, override_cents: after.pie_price_override_cents, note: after.pricing_note ?? "" } });
+    const { data: re } = await db.from("orders").select("total_cents").eq("id", v.order_id).single();
+    total = re?.total_cents ?? total;
+  }
+  const { data: pays } = await db.from("payments").select("kind, amount_cents, status").eq("order_id", v.order_id);
+  const paid = (pays ?? []).filter((p) => p.status !== "failed").reduce((a, p) => a + (p.kind === "payment" ? p.amount_cents : -p.amount_cents), 0);
+  touch();
+  revalidatePath(`/admin/orders/${v.order_id}`);
+  return { total_cents: total, owed_cents: paid > 0 ? Math.max(total - paid, 0) : undefined, refund_cents: paid > total ? paid - total : undefined };
 }
