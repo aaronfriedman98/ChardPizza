@@ -24,17 +24,20 @@ const FALLBACK_PRICE_UPDATED =
 export function PriceText({ order: o, settings }: { order: Order; settings: Settings }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Templates are fetched ahead of time: the texting app must open in the same instant as the tap, with no await first.
+  useEffect(() => {
+    if (!cache) getMessageTemplates().then((t) => (cache = t));
+  }, []);
   if (!needsPriceText(o)) return null;
   const sent = wasPriceTexted(o);
 
   async function send() {
     setBusy(true);
-    const templates = cache ?? (await getMessageTemplates());
-    cache = templates;
+    const templates = cache ?? [];
     const t = templates.find((x) => x.key === "price_updated");
     const tierName = o.price_tiers?.name ?? "Special";
     const body = renderMessage(t?.body ?? FALLBACK_PRICE_UPDATED, messageVars(o, settings, { tier_name: tierName }));
-    window.open(smsLink(o.customer_phone, body), "_blank", "noopener");
+    window.location.href = smsLink(o.customer_phone, body);
     await logMessage({ order_id: o.id, template_key: "price_updated", channel: "sms", recipient: o.customer_phone, body });
     setBusy(false);
     router.refresh();
@@ -61,6 +64,10 @@ export function PriceText({ order: o, settings }: { order: Order; settings: Sett
 export function ConfirmText({ order: o, settings }: { order: Order; settings: Settings }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Templates are fetched ahead of time: the texting app must open in the same instant as the tap, with no await first.
+  useEffect(() => {
+    if (!cache) getMessageTemplates().then((t) => (cache = t));
+  }, []);
   if (wasEmailed(o) || o.status === "cancelled" || o.status === "completed") return null;
   if (wasTextedConfirmation(o)) {
     return <span className="rounded-lg bg-green-50 px-2.5 py-2 text-xs font-semibold text-green-700">✓ Confirmation texted</span>;
@@ -68,12 +75,11 @@ export function ConfirmText({ order: o, settings }: { order: Order; settings: Se
 
   async function send() {
     setBusy(true);
-    const templates = cache ?? (await getMessageTemplates());
-    cache = templates;
+    const templates = cache ?? [];
     const t = templates.find((x) => x.key === "order_received");
     const when = `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${new Date(o.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: settings.time_zone })}`;
     const body = renderMessage(t?.body ?? FALLBACK_CONFIRMATION, messageVars(o, settings, { pickup_time: when }));
-    window.open(smsLink(o.customer_phone, body), "_blank", "noopener");
+    window.location.href = smsLink(o.customer_phone, body);
     await logMessage({ order_id: o.id, template_key: "order_received", channel: "sms", recipient: o.customer_phone, body });
     setBusy(false);
     router.refresh();
@@ -131,7 +137,8 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
     const body = template ? renderMessage(template.body, messageVars(o, settings, extras)) : (customBody ?? "");
     if (!body) return;
     const url = channel === "whatsapp" ? whatsAppLink(o.customer_phone, body) : smsLink(o.customer_phone, body);
-    window.open(url, "_blank", "noopener");
+    if (channel === "sms") window.location.href = url;
+    else window.open(url, "_blank", "noopener");
     void logMessage({ order_id: o.id, template_key: template?.key ?? null, channel, recipient: o.customer_phone, body });
     setOpen(false);
   }
