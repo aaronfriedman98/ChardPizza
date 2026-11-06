@@ -135,22 +135,31 @@ export async function movePriority(orderId: string, direction: "up" | "down"): P
     .eq("service_id", o.service_id)
     .in("status", ["confirmed", "making"])
     .eq("is_on_hold", false);
-  const list = ((rows ?? []) as unknown as Order[]).sort(queueSort);
+  const all = ((rows ?? []) as unknown as Order[]).sort(queueSort);
+  const me = all.find((r) => r.id === orderId);
+  if (!me) return { error: "Only orders waiting for the oven can be moved." };
+  // Make now and Here orders sort ahead of everyone else, so only move among orders of the same kind.
+  const list = all.filter((r) => r.is_rush === me.is_rush && r.customer_arrived === me.customer_arrived);
   const idx = list.findIndex((r) => r.id === orderId);
   const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-  if (idx < 0 || swapIdx < 0 || swapIdx >= list.length) return { ok: "" };
-  const me = list[idx];
-  const other = list[swapIdx];
-  // Equal priorities would not reorder; nudge by one second.
-  let mine = other.production_priority;
-  let theirs = me.production_priority;
-  if (mine === theirs) {
-    if (direction === "up") mine -= 1;
-    else theirs -= 1;
+  if (swapIdx < 0 || swapIdx >= list.length) return { error: direction === "up" ? "Already first in line." : "Already last in line." };
+  const reordered = [...list];
+  [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+  // Renumber so every order sorts strictly after the one before it, staying as close to its own time as possible.
+  // (Several orders at one time share a priority, so a plain swap would not move anything.)
+  let prev = -Infinity;
+  const changes: { id: string; p: number }[] = [];
+  for (const r of reordered) {
+    const p = Math.max(r.production_priority, prev + 1);
+    if (p !== r.production_priority) changes.push({ id: r.id, p });
+    prev = p;
   }
-  const r1 = await supabase.from("orders").update({ production_priority: mine }).eq("id", me.id);
-  const r2 = await supabase.from("orders").update({ production_priority: theirs }).eq("id", other.id);
-  if (r1.error || r2.error) return { error: (r1.error ?? r2.error)!.message };
+  // The swap itself must stick even when the numbers already looked ordered.
+  if (!changes.length) return { ok: "" };
+  for (const c of changes) {
+    const { error } = await supabase.from("orders").update({ production_priority: c.p }).eq("id", c.id);
+    if (error) return { error: error.message };
+  }
   await audit(supabase, admin.id, `order.move_${direction}`, "order", orderId);
   touch();
   return { ok: "" };

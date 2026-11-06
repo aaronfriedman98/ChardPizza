@@ -92,7 +92,8 @@ export function ServiceBoard({
         m.set(k, [...(m.get(k) ?? []), o]);
       }
     }
-    return Array.from(m.entries());
+    // Inside each group, follow the oven order so the ▲▼ arrows, Make now and Here show up on the board.
+    return Array.from(m.entries()).map(([k, list]) => [k, [...list].sort(queueSort)] as [string, Order[]]);
   }, [shown, group, tz]);
 
   const Chip = ({ f, label, count }: { f: Filter; label: string; count?: number }) => (
