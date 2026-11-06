@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/admin/logi
           <div className="text-4xl font-black tracking-tight text-char">Char&rsquo;d</div>
           <div className="mt-1 text-sm uppercase tracking-[0.3em] text-ember">Admin</div>
         </div>
-        <LoginForm next={typeof next === "string" ? next : undefined} linkFailed={error === "link"} />
+        <LoginForm next={typeof next === "string" ? next : undefined} linkFailed={error === "link"} simple={!!process.env.ADMIN_PASSWORD} />
       </div>
     </main>
   );

@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { createHash, timingSafeEqual } from "crypto";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
   email: z.string().email(),
@@ -11,7 +13,34 @@ const schema = z.object({
   next: z.string().optional(),
 });
 
+function samePassword(a: string, b: string) {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 export async function signIn(_prev: { error?: string } | undefined, formData: FormData) {
+  // Simple mode: one shared password kept in Netlify (ADMIN_PASSWORD). It signs in as the owner account.
+  const shared = process.env.ADMIN_PASSWORD;
+  if (shared) {
+    const password = String(formData.get("password") ?? "");
+    if (!password || !samePassword(password.trim(), shared.trim())) {
+      await new Promise((r) => setTimeout(r, 1500)); // slows down guessing
+      return { error: "Wrong password." };
+    }
+    const db = createAdminClient();
+    const { data: owner } = await db.from("admin_users").select("email").eq("is_active", true).order("created_at").limit(1).maybeSingle();
+    if (!owner?.email) return { error: "No admin account found." };
+    // A one-time sign-in token made on the server. Nothing is emailed.
+    const { data: link, error: linkErr } = await db.auth.admin.generateLink({ type: "magiclink", email: owner.email });
+    if (linkErr || !link?.properties?.hashed_token) return { error: "Couldn't sign in. Try again." };
+    const supabase = await createClient();
+    const { error } = await supabase.auth.verifyOtp({ type: "magiclink", token_hash: link.properties.hashed_token });
+    if (error) return { error: "Couldn't sign in. Try again." };
+    const raw = String(formData.get("next") ?? "");
+    redirect(raw.startsWith("/admin") ? raw : "/admin");
+  }
+
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Enter your email and password." };
 
