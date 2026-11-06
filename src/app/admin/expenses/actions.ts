@@ -73,6 +73,26 @@ export async function setReimbursed(id: string, reimbursed: boolean): Promise<Re
   return { ok: "" };
 }
 
+/** One tap: every listed partner expense that is still owed gets marked paid back today. */
+export async function reimburseAll(ids: string[]): Promise<Result> {
+  const { supabase, admin } = await requireAdmin();
+  const parsed = z.array(z.string().uuid()).min(1).safeParse(ids);
+  if (!parsed.success) return { error: "Nothing to mark." };
+  const { data, error } = await supabase
+    .from("expenses")
+    .update({ reimbursed_at: new Date().toISOString() })
+    .in("id", parsed.data)
+    .eq("paid_by", "partner")
+    .eq("is_reimbursable", true)
+    .is("reimbursed_at", null)
+    .select("id");
+  if (error) return { error: error.message };
+  for (const r of data ?? []) await audit(supabase, admin.id, "expense.reimbursed", "expense", r.id as string, { bulk: true });
+  revalidatePath("/admin/expenses");
+  revalidatePath("/admin/reports");
+  return { ok: `Marked ${data?.length ?? 0} ${data?.length === 1 ? "expense" : "expenses"} paid back.` };
+}
+
 export async function deleteExpense(id: string): Promise<Result> {
   const { supabase, admin } = await requireAdmin();
   const { error } = await supabase.from("expenses").update({ deleted_at: new Date().toISOString() }).eq("id", id);

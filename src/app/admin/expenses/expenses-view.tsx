@@ -8,7 +8,7 @@ import { fmtDateOnly } from "@/lib/time";
 import { Modal } from "@/components/ui/modal";
 import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
-import { deleteExpense, receiptUrl, saveCategory, saveExpense, setReimbursed } from "./actions";
+import { deleteExpense, receiptUrl, reimburseAll, saveCategory, saveExpense, setReimbursed } from "./actions";
 
 type Svc = Pick<Service, "id" | "name" | "service_date" | "status">;
 type Partner = Pick<AdminUser, "id" | "display_name" | "is_partner">;
@@ -46,7 +46,16 @@ export function ExpensesView({
       (!filterPaidBy || (filterPaidBy === "business" ? e.paid_by === "business" : e.paid_by_admin_id === filterPaidBy)),
   );
   const total = shown.reduce((a, e) => a + e.amount_cents, 0);
-  const owed = shown.filter((e) => e.paid_by === "partner" && e.is_reimbursable && !e.reimbursed_at).reduce((a, e) => a + e.amount_cents, 0);
+  const owedRows = shown.filter((e) => e.paid_by === "partner" && e.is_reimbursable && !e.reimbursed_at);
+  const owed = owedRows.reduce((a, e) => a + e.amount_cents, 0);
+
+  function payBackAll() {
+    if (!confirm(`Mark ${formatCents(owed)} as paid back? That covers ${owedRows.length} ${owedRows.length === 1 ? "expense" : "expenses"} on screen.`)) return;
+    startTransition(async () => {
+      const r = await reimburseAll(owedRows.map((e) => e.id));
+      setMessage(r.error ?? r.ok ?? null);
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -65,6 +74,14 @@ export function ExpensesView({
         <Tile label="Owed to partners" value={formatCents(owed)} sub="reimbursable, not yet paid back" tone={owed ? "amber" : undefined} />
         <Tile label="Business paid" value={formatCents(shown.filter((e) => e.paid_by === "business").reduce((a, e) => a + e.amount_cents, 0))} />
       </div>
+      {owed > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={payBackAll} disabled={pending} className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">
+            ✓ Mark all {formatCents(owed)} paid back
+          </button>
+          <span className="text-xs text-ink/60">Clears Owed to partners. Each expense can still be flipped back one at a time.</span>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <select value={filterService} onChange={(e) => setFilterService(e.target.value)} className="input w-auto">
