@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/auth";
 import { pickOpsService } from "@/lib/ops";
 import { loadServiceOrders } from "@/lib/orders";
 import { OpsList } from "@/components/admin/ops-list";
+import { DriverLink } from "@/components/admin/driver-link";
+import { driverPath } from "@/lib/driver";
 
 export const metadata = { title: "Delivery | Char'd Pizza" };
 
@@ -21,7 +23,10 @@ export default async function DeliveryPage({ searchParams }: PageProps<"/admin/d
     );
   }
   const orders = await loadServiceOrders(supabase, service.id);
+  const driverUrl = `${(settings.public_url || "https://chardpizza.netlify.app").replace(/\/$/, "")}${driverPath(service.id)}`;
   return (
+    <div className="space-y-4">
+    <DriverLink url={driverUrl} />
     <OpsList
       title="Delivery"
       service={service}
@@ -35,5 +40,6 @@ export default async function DeliveryPage({ searchParams }: PageProps<"/admin/d
         { key: "done", label: "Delivered", match: (o) => o.status === "completed", collapsed: true },
       ]}
     />
+    </div>
   );
 }
