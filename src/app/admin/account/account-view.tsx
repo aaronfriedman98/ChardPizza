@@ -7,10 +7,11 @@ import type { AccountTransaction, AdminUser, Service } from "@/lib/types";
 import { formatCents } from "@/lib/format";
 import { fmtDateOnly } from "@/lib/time";
 import { Modal } from "@/components/ui/modal";
-import { addTransaction, deleteTransaction, setBalance } from "./actions";
+import { addTransaction, deleteTransaction, recordTransfer, setBalance } from "./actions";
 
 type Partner = Pick<AdminUser, "id" | "display_name" | "is_partner">;
 type Svc = Pick<Service, "id" | "name" | "service_date" | "status">;
+export type OwedExpense = { id: string; expense_date: string; vendor: string | null; description: string | null; amount_cents: number; service_id: string | null };
 
 const KIND_LABEL: Record<AccountTransaction["kind"], string> = {
   opening_balance: "Opening balance",
@@ -27,12 +28,15 @@ export function AccountView({
   partners,
   services,
   collected = {},
+  owed = [],
 }: {
   transactions: AccountTransaction[];
   partners: Partner[];
   services: Svc[];
   /** Zelle and cash taken in per sale (all of it lands in your personal account). */
   collected?: Record<string, { zelle: number; cash: number }>;
+  /** Expenses you paid out of pocket that nobody has paid you back for. */
+  owed?: OwedExpense[];
 }) {
   const [modal, setModal] = useState<"deposit" | "partner_draw" | "other" | "set" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -56,12 +60,20 @@ export function AccountView({
     .filter((r) => r.due !== 0 && r.zelle + r.cash > 0);
   const dueTotal = toMove.reduce((a, r) => a + Math.max(r.due, 0), 0);
 
-  function recordTransfer(r: (typeof toMove)[number]) {
-    if (!confirm(`Record ${formatCents(r.due)} moved into the Char'd account for ${r.s.name}?`)) return;
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Keep what you're owed: instead of moving everything and paying yourself back, move the difference.
+  const [keep, setKeep] = useState(true);
+  const [skipped, setSkipped] = useState<Set<string>>(() => new Set());
+  const keptList = keep ? owed.filter((e) => !skipped.has(e.id)) : [];
+  const kept = keptList.reduce((a, e) => a + e.amount_cents, 0);
+  const transfer = dueTotal - kept;
+
+  function moveIt() {
+    const what = kept
+      ? `Record ${formatCents(dueTotal)} of Zelle + cash as deposited, mark ${keptList.length} expense${keptList.length === 1 ? "" : "s"} (${formatCents(kept)}) as paid back to you, and treat ${formatCents(transfer)} as transferred?`
+      : `Record ${formatCents(transfer)} moved into the Char'd account?`;
+    if (!confirm(what)) return;
     startTransition(async () => {
-      const res = await addTransaction({ kind: "deposit", txn_date: today, amount: (r.due / 100).toFixed(2), direction: "in", description: `Zelle + cash from ${r.s.name} (${fmtDateOnly(r.s.service_date, "MMM d")})`, partner_id: "", service_id: r.s.id });
+      const res = await recordTransfer({ expense_ids: keptList.map((e) => e.id) });
       if (res.error) setMessage(res.error);
     });
   }
@@ -105,9 +117,11 @@ export function AccountView({
       {toMove.length > 0 && (
         <div className="card space-y-3 border-2 border-green-300">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Move into the Char&rsquo;d account</div>
-            <div className="text-3xl font-bold tabular-nums text-green-700">{formatCents(dueTotal)}</div>
-            <div className="text-xs text-ink/60">Zelle and cash customers paid you, not yet moved over. Card payments go to the business through Stripe, so they&rsquo;re not in here.</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Transfer to the Char&rsquo;d account</div>
+            <div className={`text-4xl font-bold tabular-nums ${transfer < 0 ? "text-red-700" : "text-green-700"}`}>{formatCents(Math.max(transfer, 0))}</div>
+            <div className="text-xs text-ink/60">
+              {formatCents(dueTotal)} Zelle + cash you took in{kept ? ` − ${formatCents(kept)} you're keeping for expenses you paid` : ""}. Card payments reach the business through Stripe, so they&rsquo;re not in here.
+            </div>
           </div>
           <ul className="divide-y divide-line">
             {toMove.map((r) => (
@@ -120,19 +134,61 @@ export function AccountView({
                     {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
                   </div>
                 </div>
-                {r.due > 0 ? (
-                  <>
-                    <div className="text-lg font-bold tabular-nums">{formatCents(r.due)}</div>
-                    <button disabled={pending} onClick={() => recordTransfer(r)} className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">
-                      ✓ I moved it
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-sm text-amber-800">Moved {formatCents(-r.due)} more than you took in</div>
-                )}
+                {r.due > 0 ? <div className="text-lg font-bold tabular-nums">{formatCents(r.due)}</div> : <div className="text-sm text-amber-800">Moved {formatCents(-r.due)} more than you took in</div>}
               </li>
             ))}
           </ul>
+
+          {owed.length > 0 && (
+            <div className="rounded-xl bg-cream p-3">
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold">Keep what you&rsquo;re owed</div>
+                  <div className="text-xs text-ink/60">You paid these out of pocket. Keep the money instead of moving it over and paying yourself back later.</div>
+                </div>
+                <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} className="h-5 w-5 accent-green-700" />
+              </label>
+              {keep && (
+                <ul className="mt-2 divide-y divide-line/70">
+                  {owed.map((e) => {
+                    const on = !skipped.has(e.id);
+                    return (
+                      <li key={e.id} className={`flex items-center gap-3 py-1.5 text-sm ${on ? "" : "opacity-50"}`}>
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={(ev) =>
+                            setSkipped((s) => {
+                              const n = new Set(s);
+                              if (ev.target.checked) n.delete(e.id);
+                              else n.add(e.id);
+                              return n;
+                            })
+                          }
+                          className="h-4 w-4 accent-green-700"
+                        />
+                        <div className="min-w-0 flex-1 truncate">
+                          {fmtDateOnly(e.expense_date, "MMM d")} · {[e.vendor, e.description].filter(Boolean).join(" · ") || "Expense"}
+                          {e.service_id && svcName.get(e.service_id) ? <span className="text-ink/50"> · {svcName.get(e.service_id)}</span> : null}
+                        </div>
+                        <div className="tabular-nums">{formatCents(e.amount_cents)}</div>
+                      </li>
+                    );
+                  })}
+                  <li className="flex justify-between pt-2 text-sm font-semibold">
+                    <span>Keeping</span>
+                    <span className="tabular-nums">{formatCents(kept)}</span>
+                  </li>
+                </ul>
+              )}
+            </div>
+          )}
+
+          {transfer < 0 && <p className="text-sm font-semibold text-red-700">You picked more to keep than you took in. Uncheck some expenses.</p>}
+          <button disabled={pending || transfer < 0 || dueTotal <= 0} onClick={moveIt} className="w-full rounded-xl bg-green-700 px-4 py-3 text-base font-bold text-white hover:bg-green-800 disabled:opacity-60 sm:w-auto">
+            ✓ I transferred {formatCents(Math.max(transfer, 0))}
+          </button>
+          <p className="text-xs text-ink/60">This records the deposit{kept ? " and marks those expenses paid back" : ""}, so the balance above matches the bank.</p>
         </div>
       )}
 
