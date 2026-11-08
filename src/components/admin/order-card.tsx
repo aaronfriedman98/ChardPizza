@@ -29,6 +29,7 @@ export function OrderCard({
   onError?: (m: string) => void;
 }) {
   const [confirmPickup, setConfirmPickup] = useState(false);
+  const [showAddress, setShowAddress] = useState(false);
   // Buttons that are saving right now. Each tap runs on its own, so tapping Ready on three cards
   // (or two buttons on one card) never waits for or blocks the others.
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
@@ -130,7 +131,7 @@ export function OrderCard({
         ))}
       </ul>
       {o.special_instructions && <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1 text-sm text-amber-900">“{o.special_instructions}”</p>}
-      {mode === "delivery" && o.address_line1 && (
+      {(mode === "delivery" || showAddress) && o.fulfillment === "delivery" && o.address_line1 && (
         <p className="mt-1.5 text-sm text-ink/80">
           {o.address_line1}
           {o.address_line2 ? `, ${o.address_line2}` : ""}
@@ -170,6 +171,16 @@ export function OrderCard({
           <PriceText order={o} settings={thresholds} />
           <QuickSend order={o} settings={thresholds} />
           {mode === "board" && <ChangePies order={o} />}
+          {mode === "board" && o.fulfillment === "delivery" && (
+            <button type="button" onClick={() => setShowAddress((v) => !v)} className={`rounded-lg px-3 py-2 text-sm font-semibold ${showAddress ? "bg-char text-white" : "bg-cream text-ink hover:bg-line"}`}>
+              📍 Address
+            </button>
+          )}
+          {mode === "board" && o.fulfillment === "pickup" && (
+            <Link href={`/admin/orders/${o.id}/edit?to=delivery`} className="rounded-lg bg-cream px-3 py-2 text-sm font-semibold text-ink hover:bg-line">
+              → Delivery
+            </Link>
+          )}
           {paid && mode === "board" && (
             <CardButton {...B} onClick={() => confirm("Undo Mark Paid on this order?") && run(() => markUnpaid(o.id))}>Undo paid</CardButton>
           )}
@@ -206,7 +217,10 @@ export function OrderCard({
         </div>
       )}
       {done && o.status === "completed" && mode === "board" && (
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Handed off but not paid yet: still settle it right here. */}
+          {!paid && <CardButton {...B} primary onClick={() => run(() => markPaid(o.id))}>Mark paid</CardButton>}
+          {!paid && <QuickSend order={o} settings={thresholds} />}
           <CardButton {...B} onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Undo pickup</CardButton>
         </div>
       )}

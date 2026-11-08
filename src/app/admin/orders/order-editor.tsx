@@ -17,7 +17,7 @@ import { tierLabel, tierPrice } from "@/lib/pricing";
  * One editor for both "new manual order" and "edit existing order".
  * Same rules as the public flow, plus an explicit capacity override switch.
  */
-export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; order?: Order; tiers?: PriceTier[] }) {
+export function OrderEditor({ data, order, tiers = [], startDelivery = false }: { data: OrderingData; order?: Order; tiers?: PriceTier[]; startDelivery?: boolean }) {
   const router = useRouter();
   const tz = data.settings.time_zone;
   const s = data.service;
@@ -33,7 +33,9 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
     }
     return m;
   });
-  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">(order?.fulfillment ?? (s.pickup_enabled ? "pickup" : "delivery"));
+  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">(startDelivery ? "delivery" : (order?.fulfillment ?? (s.pickup_enabled ? "pickup" : "delivery")));
+  // Waived when the order is already a delivery with no fee on it.
+  const [waiveFee, setWaiveFee] = useState(() => !!order && order.fulfillment === "delivery" && order.delivery_fee_cents === 0);
   const [zoneId, setZoneId] = useState<string>(() => data.zones.find((z) => z.name === order?.delivery_zone_name)?.id ?? data.zones[0]?.id ?? "");
   const [address, setAddress] = useState({ line1: order?.address_line1 ?? "", line2: order?.address_line2 ?? "", city: order?.address_city ?? "", notes: order?.address_notes ?? "" });
   const [slotId, setSlotId] = useState<string>(order?.time_slot_id ?? "");
@@ -55,7 +57,8 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
   const priceOf = (item: (typeof lines)[number]["item"]) => (tier && item.capacity_units > 0 ? tierPrice(tier, item.price_cents) : item.price_cents);
   const subtotal = lines.reduce((a, l) => a + priceOf(l.item) * l.qty, 0);
   const zone = data.zones.find((z) => z.id === zoneId) ?? null;
-  const total = subtotal + (fulfillment === "delivery" && zone ? zone.fee_cents : 0);
+  const feeCents = fulfillment === "delivery" && zone && !waiveFee ? zone.fee_cents : 0;
+  const total = subtotal + feeCents;
 
   // When editing, the order's own units are not "sold" against it.
   const ownUnits = order ? Number(order.capacity_units) : 0;
@@ -89,6 +92,7 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
       payment_method: payment,
       special_instructions: special,
       capacity_override: override,
+      waive_delivery_fee: fulfillment === "delivery" && waiveFee,
     };
     startTransition(async () => {
       const r = editing
@@ -161,6 +165,13 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
                 <input className="input" placeholder="City" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} />
               </div>
               <input className="input" placeholder="Delivery notes" value={address.notes} onChange={(e) => setAddress({ ...address, notes: e.target.value })} />
+              <div className="flex items-center justify-between rounded-xl bg-cream px-3 py-2">
+                <div>
+                  <div className="text-sm font-semibold">Waive delivery fee</div>
+                  <div className="text-xs text-ink/60">No {zone ? formatCents(zone.fee_cents) : ""} fee on this order.</div>
+                </div>
+                <Switch checked={waiveFee} onChange={setWaiveFee} label="Waive delivery fee" />
+              </div>
             </div>
           )}
           <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
@@ -271,7 +282,7 @@ export function OrderEditor({ data, order, tiers = [] }: { data: OrderingData; o
           {fulfillment === "delivery" && zone && (
             <div className="flex justify-between text-sm text-ink/70">
               <span>Delivery · {zone.name}</span>
-              <span>{formatCents(zone.fee_cents)}</span>
+              <span>{waiveFee ? <><s className="mr-1 opacity-60">{formatCents(zone.fee_cents)}</s>waived</> : formatCents(zone.fee_cents)}</span>
             </div>
           )}
           <div className="flex justify-between text-lg font-bold">

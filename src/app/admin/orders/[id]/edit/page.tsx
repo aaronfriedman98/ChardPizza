@@ -7,8 +7,9 @@ import { OrderEditor } from "../../order-editor";
 
 export const metadata = { title: "Edit order | Char'd Pizza" };
 
-export default async function EditOrderPage({ params }: PageProps<"/admin/orders/[id]/edit">) {
+export default async function EditOrderPage({ params, searchParams }: PageProps<"/admin/orders/[id]/edit">) {
   const { id } = await params;
+  const { to } = await searchParams;
   const { supabase } = await requireAdmin();
   const { data } = await supabase
     .from("orders")
@@ -34,7 +35,7 @@ export default async function EditOrderPage({ params }: PageProps<"/admin/orders
       {locked ? (
         <div className="card text-ink/70">This order is {order.status}. Restore it from the order page before editing.</div>
       ) : (
-        <OrderEditor data={ordering} order={order} />
+        <OrderEditor data={ordering} order={order} startDelivery={to === "delivery"} />
       )}
     </div>
   );

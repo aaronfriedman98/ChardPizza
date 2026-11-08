@@ -7,6 +7,7 @@ import { formatCents, formatPhone } from "@/lib/format";
 import { fmtDateOnly, fmtWindow } from "@/lib/time";
 import { releaseExpiredCardHolds, settleCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { PayNow } from "./pay-now";
+import { SwitchPay } from "./switch-pay";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your order | Char'd Pizza" };
@@ -32,7 +33,7 @@ type OrderRow = {
   payment_status: string;
   special_instructions: string | null;
   confirmation_token: string;
-  services: { name: string; service_date: string; customer_instructions: string | null; slot_minutes: number | null };
+  services: { name: string; service_date: string; customer_instructions: string | null; slot_minutes: number | null; cash_enabled: boolean; zelle_enabled: boolean };
   order_items: { id: string; item_name: string; quantity: number; line_total_cents: number }[];
 };
 
@@ -74,7 +75,7 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
   const [{ data }, settings] = await Promise.all([
     db
       .from("orders")
-      .select("*, services(name, service_date, customer_instructions, slot_minutes), order_items(id, item_name, quantity, line_total_cents)")
+      .select("*, services(name, service_date, customer_instructions, slot_minutes, cash_enabled, zelle_enabled), order_items(id, item_name, quantity, line_total_cents)")
       .eq("order_number", orderNumber.toUpperCase())
       .eq("confirmation_token", t)
       .maybeSingle(),
@@ -152,6 +153,7 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
                   {canceled ? "You left the payment page before paying. " : ""}Your time is held for a few minutes. Pay by card to lock it in.
                 </p>
                 <PayNow orderNumber={o.order_number} token={t} />
+                <SwitchPay orderNumber={o.order_number} token={t} zelle={o.services.zelle_enabled} cash={o.services.cash_enabled} delivery={o.fulfillment === "delivery"} />
               </>
             )}
             {o.payment_method === "card" && o.payment_status === "paid" && <p className="mt-2 text-flour/85">Paid by card. You&rsquo;re all set.</p>}

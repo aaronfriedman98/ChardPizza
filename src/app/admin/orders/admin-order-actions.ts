@@ -37,6 +37,7 @@ const baseSchema = z.object({
   payment_method: z.enum(["cash", "zelle", "card"]),
   special_instructions: z.string().trim().max(300).optional().default(""),
   capacity_override: z.boolean().optional().default(false),
+  waive_delivery_fee: z.boolean().optional().default(false),
 });
 
 const createSchema = baseSchema.extend({
@@ -54,6 +55,19 @@ export type ReviseOrderInput = z.input<typeof reviseSchema>;
 function mapError(message: string): Result {
   const m = /^([A-Z_]+): (.*)$/.exec(message);
   return { error: m?.[2] ?? message, code: m?.[1] ?? "ERROR" };
+}
+
+// Takes the delivery fee off an order (and lets a now-covered balance count as paid).
+async function waiveDeliveryFee(db: ReturnType<typeof createAdminClient>, orderId: string) {
+  const { data: o } = await db.from("orders").select("delivery_fee_cents, total_cents, payment_status").eq("id", orderId).single();
+  if (!o || !o.delivery_fee_cents) return;
+  const total = o.total_cents - o.delivery_fee_cents;
+  const { data: pays } = await db.from("payments").select("kind, amount_cents, status").eq("order_id", orderId);
+  const paid = (pays ?? []).filter((p) => p.status !== "failed").reduce((a, p) => a + (p.kind === "payment" ? p.amount_cents : -p.amount_cents), 0);
+  await db
+    .from("orders")
+    .update({ delivery_fee_cents: 0, total_cents: total, ...(paid > 0 && paid >= total ? { payment_status: "paid" } : {}) })
+    .eq("id", orderId);
 }
 
 function touch() {
@@ -93,6 +107,8 @@ export async function createManualOrder(raw: CreateManualOrderInput): Promise<Re
     const { error: pErr } = await db.rpc("apply_order_pricing", { payload: { order_id: result.id, admin_id: admin.id, tier_id: v.price_tier_id, override_cents: null, note: "" } });
     if (pErr) console.error("apply_order_pricing failed:", pErr.message);
   }
+
+  if (v.fulfillment === "delivery" && v.waive_delivery_fee) await waiveDeliveryFee(db, result.id);
 
   if (v.mark_paid) {
     const { data: o } = await supabase.from("orders").select("total_cents").eq("id", result.id).single();
@@ -150,6 +166,7 @@ export async function reviseOrder(raw: ReviseOrderInput): Promise<Result | void>
   if (after && (after.price_tier_id || after.pie_price_override_cents != null)) {
     await db.rpc("apply_order_pricing", { payload: { order_id: v.order_id, admin_id: admin.id, tier_id: after.price_tier_id, override_cents: after.pie_price_override_cents, note: after.pricing_note ?? "" } });
   }
+  if (v.fulfillment === "delivery" && v.waive_delivery_fee) await waiveDeliveryFee(db, v.order_id);
   touch();
   revalidatePath(`/admin/orders/${v.order_id}`);
   redirect(`/admin/orders/${v.order_id}`);
@@ -200,6 +217,8 @@ export async function quickChangeItems(raw: z.input<typeof quickSchema>): Promis
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the pies.", code: "INVALID" };
   const v = parsed.data;
   const db = createAdminClient();
+  const { data: before } = await db.from("orders").select("fulfillment, delivery_fee_cents").eq("id", v.order_id).single();
+  const keepWaiver = before?.fulfillment === "delivery" && before.delivery_fee_cents === 0;
   // Only items change: revise_order keeps the time, contact, delivery and payment method as they are.
   const { error } = await db.rpc("revise_order", {
     payload: { order_id: v.order_id, admin_id: admin.id, items: v.items, capacity_override: v.capacity_override },
@@ -209,6 +228,11 @@ export async function quickChangeItems(raw: z.input<typeof quickSchema>): Promis
   let total = after?.total_cents ?? 0;
   if (after && (after.price_tier_id || after.pie_price_override_cents != null)) {
     await db.rpc("apply_order_pricing", { payload: { order_id: v.order_id, admin_id: admin.id, tier_id: after.price_tier_id, override_cents: after.pie_price_override_cents, note: after.pricing_note ?? "" } });
+    const { data: re } = await db.from("orders").select("total_cents").eq("id", v.order_id).single();
+    total = re?.total_cents ?? total;
+  }
+  if (keepWaiver) {
+    await waiveDeliveryFee(db, v.order_id);
     const { data: re } = await db.from("orders").select("total_cents").eq("id", v.order_id).single();
     total = re?.total_cents ?? total;
   }

@@ -136,3 +136,35 @@ export async function resumeCardPayment(orderNumber: string, token: string): Pro
   }
   redirect(url);
 }
+
+/** Card won't go through? The customer can switch a waiting card order to Zelle or cash themselves. */
+export async function switchToOfflinePayment(orderNumber: string, token: string, method: "zelle" | "cash"): Promise<{ error?: string }> {
+  const db = createAdminClient();
+  const { data: o } = await db
+    .from("orders")
+    .select("id, status, payment_status, total_cents, processing_fee_cents, services(cash_enabled, zelle_enabled)")
+    .eq("order_number", orderNumber)
+    .eq("confirmation_token", token)
+    .maybeSingle();
+  if (!o) return { error: "We couldn't find that order." };
+  if (o.status !== "pending_payment" || o.payment_status === "paid") return { error: "This order isn't waiting for a card payment anymore. Refresh the page." };
+  const svc = o.services as unknown as { cash_enabled: boolean; zelle_enabled: boolean } | null;
+  if (method === "zelle" && !svc?.zelle_enabled) return { error: "Zelle isn't available for this sale." };
+  if (method === "cash" && !svc?.cash_enabled) return { error: "Cash isn't available for this sale." };
+  const { error } = await db
+    .from("orders")
+    .update({
+      status: "confirmed",
+      expires_at: null,
+      payment_method: method,
+      payment_status: method === "cash" ? "due_at_pickup" : "awaiting_payment",
+      total_cents: o.total_cents - o.processing_fee_cents, // no card, no card fee
+      processing_fee_cents: 0,
+    })
+    .eq("id", o.id)
+    .eq("status", "pending_payment");
+  if (error) return { error: "That didn't go through. Try again." };
+  await db.from("audit_log").insert({ actor_id: null, action: "order.switched_to_" + method, entity_type: "order", entity_id: o.id, details: { order_number: orderNumber } });
+  await Promise.all([sendOrderConfirmation(o.id), notifyOwnerNewOrder(o.id)]);
+  return {};
+}
