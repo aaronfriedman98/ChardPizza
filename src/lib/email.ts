@@ -6,7 +6,7 @@ import type { Settings } from "@/lib/types";
 import type { Order } from "@/lib/orders";
 import { messageVars, renderMessage } from "@/lib/messages";
 import { formatCents } from "@/lib/format";
-import { fmtDateOnly, fmtTime } from "@/lib/time";
+import { fmtDate, fmtWindow } from "@/lib/time";
 
 // Gmail (app password) first, since it needs no domain; Resend as the fallback.
 function gmailConfigured() {
@@ -100,7 +100,7 @@ export async function notifyOwnerNewOrder(orderId: string): Promise<void> {
     if (!to || !(gmailConfigured() || process.env.RESEND_API_KEY)) return;
 
     const tz = s.time_zone;
-    const when = `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDateOnly(o.scheduled_at.slice(0, 10), "EEE MMM d")} at ${fmtTime(o.scheduled_at, tz)}`;
+    const when = `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDate(o.scheduled_at, tz, "EEE MMM d")}, ${fmtWindow(o.scheduled_at, tz)}`;
     const items = o.order_items.map((it) => `${it.quantity} × ${it.item_name}`).join(", ");
     const pay = o.payment_status === "paid" ? `PAID by ${o.payment_method}` : `${o.payment_method} · not paid yet`;
     const where = o.fulfillment === "delivery" ? [o.address_line1, o.address_line2, o.address_city].filter(Boolean).join(", ") : "";
@@ -137,7 +137,7 @@ function buildText(o: Order, s: Settings, intro: string, link: string) {
   const tz = s.time_zone;
   const lines = [
     `${s.business_name} - order ${o.order_number}`,
-    `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDateOnly(o.scheduled_at.slice(0, 10), "EEEE, MMMM d")} at ${fmtTime(o.scheduled_at, tz)}`,
+    `${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} ${fmtDate(o.scheduled_at, tz, "EEEE, MMMM d")}, ${fmtWindow(o.scheduled_at, tz)}`,
     "",
     intro,
     "",
@@ -185,7 +185,7 @@ function buildHtml(o: Order, s: Settings, intro: string, link: string) {
     <img src="${logo}" alt="${esc(s.business_name)}" width="220" style="display:block;margin:0 auto;width:220px;height:auto">
     <div style="margin-top:14px;font-size:13px;letter-spacing:3px;color:#c9a25c">ORDER NUMBER</div>
     <div style="font-size:34px;font-weight:900;color:#c9a25c">${esc(o.order_number)}</div>
-    <div style="margin-top:12px;font-size:16px">${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>${esc(fmtDateOnly(o.scheduled_at.slice(0, 10), "EEEE, MMMM d"))}</b> at <b>${esc(fmtTime(o.scheduled_at, tz))}</b></div>
+    <div style="margin-top:12px;font-size:16px">${o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>${esc(fmtDate(o.scheduled_at, tz, "EEEE, MMMM d"))}</b>, <b>${esc(fmtWindow(o.scheduled_at, tz))}</b></div>
   </div>
   <p style="font-size:16px;line-height:1.5;margin:20px 4px">${esc(intro).replace(/\n/g, "<br>")}</p>
   <div style="background:#fff;border:1px solid #e8e0d4;border-radius:4px;padding:16px 18px">

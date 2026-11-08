@@ -8,7 +8,7 @@ import type { OrderingData, PublicSlot } from "@/lib/public";
 import { formatCents } from "@/lib/format";
 import { cardFeeCents, cardFeeLabel } from "@/lib/fees";
 import { tierLabel, tierPrice } from "@/lib/pricing";
-import { fmtDateOnly, fmtTime } from "@/lib/time";
+import { fmtDateOnly, fmtTime, fmtWindow } from "@/lib/time";
 import { lookupPricing, placeOrder } from "./actions";
 
 type Step = 1 | 2 | 3 | 4;
@@ -313,6 +313,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
                       }`}
                     >
                       <div className="font-display text-lg leading-none">{fmtTime(slot.slot_start, tz)}</div>
+                      <div className={`mt-0.5 text-[11px] ${chosen ? "text-wood/70" : "text-flour/50"}`}>to {fmtTime(slot.slot_end, tz).replace(/ [AP]M$/, "")}</div>
                       {!ok && !slot.is_blocked && slot.remaining > 0 && <div className="mt-1 text-[10px] no-underline">only {slot.remaining} left</div>}
                       {tight && !chosen && <div className="mt-1 text-[10px] text-gold2">{slot.remaining} left</div>}
                     </button>
@@ -321,7 +322,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
               </div>
               {!slotId && firstOk && units > 0 && data.slots.some((x) => !slotOk(x)) && (
                 <button onClick={() => setSlotId(firstOk.id)} className="text-sm text-gold2 underline-offset-4 hover:underline">
-                  Earliest that fits your order: {fmtTime(firstOk.slot_start, tz)}
+                  Earliest that fits your order: {fmtWindow(firstOk.slot_start, tz, firstOk.slot_end)}
                 </button>
               )}
             </div>
@@ -408,7 +409,7 @@ export function OrderFlow({ data, source }: { data: OrderingData; source: string
             <div className="grid gap-3 sm:grid-cols-2">
               <Summary title={fulfillment === "delivery" ? "Delivery" : "Pickup"} onEdit={() => setStep(2)}>
                 <div className="font-semibold">
-                  {fmtDateOnly(s.service_date, "EEE, MMM d")} · {chosenSlot ? fmtTime(chosenSlot.slot_start, tz) : ""}
+                  {fmtDateOnly(s.service_date, "EEE, MMM d")} · {chosenSlot ? fmtWindow(chosenSlot.slot_start, tz, chosenSlot.slot_end) : ""}
                 </div>
                 {fulfillment === "delivery" ? (
                   <div className="text-flour/70">

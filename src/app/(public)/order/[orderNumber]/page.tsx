@@ -4,7 +4,7 @@ import { LogoMark, Wordmark } from "@/components/brand/logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/public";
 import { formatCents, formatPhone } from "@/lib/format";
-import { fmtDateOnly, fmtTime } from "@/lib/time";
+import { fmtDateOnly, fmtWindow } from "@/lib/time";
 import { releaseExpiredCardHolds, settleCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { PayNow } from "./pay-now";
 
@@ -32,7 +32,7 @@ type OrderRow = {
   payment_status: string;
   special_instructions: string | null;
   confirmation_token: string;
-  services: { name: string; service_date: string; customer_instructions: string | null };
+  services: { name: string; service_date: string; customer_instructions: string | null; slot_minutes: number | null };
   order_items: { id: string; item_name: string; quantity: number; line_total_cents: number }[];
 };
 
@@ -74,7 +74,7 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
   const [{ data }, settings] = await Promise.all([
     db
       .from("orders")
-      .select("*, services(name, service_date, customer_instructions), order_items(id, item_name, quantity, line_total_cents)")
+      .select("*, services(name, service_date, customer_instructions, slot_minutes), order_items(id, item_name, quantity, line_total_cents)")
       .eq("order_number", orderNumber.toUpperCase())
       .eq("confirmation_token", t)
       .maybeSingle(),
@@ -117,8 +117,8 @@ export default async function ConfirmationPage({ params, searchParams }: PagePro
           </div>
           {!cancelled && (
             <p className="rise rise-3 mt-5 text-lg">
-              {o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>{fmtDateOnly(o.services.service_date, "EEEE, MMMM d")}</b> at{" "}
-              <b>{fmtTime(o.scheduled_at, tz)}</b>
+              {o.fulfillment === "delivery" ? "Delivery" : "Pickup"} <b>{fmtDateOnly(o.services.service_date, "EEEE, MMMM d")}</b>,{" "}
+              <b>{fmtWindow(o.scheduled_at, tz, null, o.services.slot_minutes ?? 15)}</b>
             </p>
           )}
         </div>

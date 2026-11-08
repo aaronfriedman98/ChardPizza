@@ -1,7 +1,7 @@
 import type { Settings } from "@/lib/types";
 import type { Order } from "@/lib/orders";
 import { formatCents } from "@/lib/format";
-import { fmtTime } from "@/lib/time";
+import { fmtWindow } from "@/lib/time";
 
 export type MessageTemplate = { key: string; name: string; channel: "email" | "sms" | "whatsapp"; subject: string | null; body: string; is_active: boolean; sort_order: number };
 
@@ -24,7 +24,7 @@ export function messageVars(
     first_name: first,
     name: o.customer_name,
     order_number: o.order_number,
-    pickup_time: fmtTime(o.scheduled_at, settings.time_zone),
+    pickup_time: fmtWindow(o.scheduled_at, settings.time_zone),
     business_name: settings.business_name,
     items: o.order_items.map((it) => `${it.quantity}× ${it.item_name}`).join(", "),
     total: formatCents(o.total_cents),

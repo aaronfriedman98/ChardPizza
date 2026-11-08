@@ -19,6 +19,14 @@ export function fmtTime(iso: string, tz: string): string {
   return format(new TZDate(iso, tz), "h:mm a");
 }
 
+/** A slot as a window: "8:15–8:30 PM" (or "11:45 AM–12:00 PM" across noon/midnight). Ends at endIso, or minutes after the start. */
+export function fmtWindow(startIso: string, tz: string, endIso?: string | null, minutes = 15): string {
+  const start = new TZDate(startIso, tz);
+  const end = new TZDate(endIso ?? new Date(new Date(startIso).getTime() + minutes * 60000).toISOString(), tz);
+  const sameHalf = format(start, "a") === format(end, "a");
+  return `${format(start, sameHalf ? "h:mm" : "h:mm a")}–${format(end, "h:mm a")}`;
+}
+
 export function fmtDate(iso: string, tz: string, pattern = "EEE, MMM d"): string {
   return format(new TZDate(iso, tz), pattern);
 }
