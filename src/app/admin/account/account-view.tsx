@@ -29,6 +29,7 @@ export function AccountView({
   services,
   collected = {},
   owed = [],
+  unpaid = {},
 }: {
   transactions: AccountTransaction[];
   partners: Partner[];
@@ -37,6 +38,8 @@ export function AccountView({
   collected?: Record<string, { zelle: number; cash: number }>;
   /** Expenses you paid out of pocket that nobody has paid you back for. */
   owed?: OwedExpense[];
+  /** Zelle/cash orders not paid yet, per sale. Not counted until they are marked paid. */
+  unpaid?: Record<string, { name: string; cents: number }[]>;
 }) {
   const [modal, setModal] = useState<"deposit" | "partner_draw" | "other" | "set" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -133,6 +136,11 @@ export function AccountView({
                   <div className="text-xs text-ink/60">
                     {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
                   </div>
+                  {(unpaid[r.s.id] ?? []).length > 0 && (
+                    <div className="mt-0.5 text-xs text-amber-800">
+                      Not counted until paid: {(unpaid[r.s.id] ?? []).map((u) => `${u.name} ${formatCents(u.cents)}`).join(", ")}
+                    </div>
+                  )}
                 </div>
                 {r.due > 0 ? <div className="text-lg font-bold tabular-nums">{formatCents(r.due)}</div> : <div className="text-sm text-amber-800">Moved {formatCents(-r.due)} more than you took in</div>}
               </li>
@@ -189,6 +197,16 @@ export function AccountView({
             ✓ I transferred {formatCents(Math.max(transfer, 0))}
           </button>
           <p className="text-xs text-ink/60">This records the deposit{kept ? " and marks those expenses paid back" : ""}, so the balance above matches the bank.</p>
+        </div>
+      )}
+
+      {toMove.length === 0 && Object.keys(unpaid).length > 0 && (
+        <div className="card text-sm">
+          <span className="font-semibold">Nothing to transfer right now.</span> Still unpaid:{" "}
+          {Object.entries(unpaid)
+            .flatMap(([, list]) => list.map((u) => `${u.name} ${formatCents(u.cents)}`))
+            .join(", ")}
+          . Once you mark them paid, the amount to move shows up here.
         </div>
       )}
 
