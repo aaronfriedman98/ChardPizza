@@ -7,6 +7,7 @@ import type { Order } from "@/lib/orders";
 import { minutesBehind, needsPriceText, wasEmailed, wasPriceTexted, wasTextedConfirmation } from "@/lib/orders";
 import { type MessageTemplate, messageVars, renderMessage, whatsAppLink, smsLink } from "@/lib/messages";
 import { getMessageTemplates, logMessage } from "@/app/admin/orders/message-actions";
+import { DEFAULT_TEMPLATES } from "@/lib/message-defaults";
 
 let cache: MessageTemplate[] | null = null;
 
@@ -26,7 +27,7 @@ export function PriceText({ order: o, settings }: { order: Order; settings: Sett
   const [busy, setBusy] = useState(false);
   // Templates are fetched ahead of time: the texting app must open in the same instant as the tap, with no await first.
   useEffect(() => {
-    if (!cache) getMessageTemplates().then((t) => (cache = t));
+    if (!cache) getMessageTemplates().then((t) => { if (t.length) cache = t; }).catch(() => {});
   }, []);
   if (!needsPriceText(o)) return null;
   const sent = wasPriceTexted(o);
@@ -66,7 +67,7 @@ export function ConfirmText({ order: o, settings }: { order: Order; settings: Se
   const [busy, setBusy] = useState(false);
   // Templates are fetched ahead of time: the texting app must open in the same instant as the tap, with no await first.
   useEffect(() => {
-    if (!cache) getMessageTemplates().then((t) => (cache = t));
+    if (!cache) getMessageTemplates().then((t) => { if (t.length) cache = t; }).catch(() => {});
   }, []);
   if (wasEmailed(o) || o.status === "cancelled" || o.status === "completed") return null;
   if (wasTextedConfirmation(o)) {
@@ -105,7 +106,8 @@ export function ConfirmText({ order: o, settings }: { order: Order; settings: Se
  */
 export function QuickSend({ order: o, settings, compact }: { order: Order; settings: Settings; compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [templates, setTemplates] = useState<MessageTemplate[]>(cache ?? []);
+  // Start from the built-in copy so the menu is never empty; the server's version replaces it when it loads.
+  const [templates, setTemplates] = useState<MessageTemplate[]>(cache ?? DEFAULT_TEMPLATES);
   const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
