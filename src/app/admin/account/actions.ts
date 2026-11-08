@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { dollarsToCents } from "@/lib/format";
 import { fmtDate, fmtDateOnly } from "@/lib/time";
+import { moneyBySale, netIn } from "@/lib/transfer";
 
 export type Result = { error?: string; ok?: string };
 
@@ -100,16 +101,14 @@ export async function recordTransfer(input: unknown): Promise<Result & { transfe
   if (!parsed.success) return { error: "Check the expenses you picked." };
   const keepIds = parsed.data.expense_ids;
 
-  const [{ data: pays }, { data: deposits }, { data: services }, { data: settings }] = await Promise.all([
-    supabase.from("payments").select("kind, method, amount_cents, status, orders!inner(service_id)").in("method", ["zelle", "cash"]).neq("status", "failed"),
+  const [money, { data: deposits }, { data: services }, { data: settings }] = await Promise.all([
+    moneyBySale(supabase),
     supabase.from("account_transactions").select("service_id, amount_cents").eq("kind", "deposit").not("service_id", "is", null),
     supabase.from("services").select("id, name, service_date"),
     supabase.from("settings").select("time_zone").eq("id", true).single(),
   ]);
   const due = new Map<string, number>();
-  for (const p of (pays ?? []) as unknown as { kind: string; amount_cents: number; orders: { service_id: string } }[]) {
-    due.set(p.orders.service_id, (due.get(p.orders.service_id) ?? 0) + (p.kind === "payment" ? p.amount_cents : -p.amount_cents));
-  }
+  for (const [sid, m] of money) due.set(sid, netIn(m));
   for (const d of deposits ?? []) due.set(d.service_id!, (due.get(d.service_id!) ?? 0) - d.amount_cents);
   const lines = [...due.entries()].filter(([, cents]) => cents > 0);
   const collected = lines.reduce((sum, [, c]) => sum + c, 0);
@@ -142,7 +141,7 @@ export async function recordTransfer(input: unknown): Promise<Result & { transfe
       amount_cents,
       service_id,
       created_by: admin.id,
-      description: s ? `Zelle + cash from ${s.name} (${fmtDateOnly(s.service_date, "MMM d")})` : "Zelle + cash from a sale",
+      description: s ? `Sales money from ${s.name} (${fmtDateOnly(s.service_date, "MMM d")})` : "Sales money from a sale",
     };
   });
   const { data: inserted, error } = await supabase.from("account_transactions").insert(rows).select("id");

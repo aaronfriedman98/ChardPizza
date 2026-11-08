@@ -35,7 +35,7 @@ export function AccountView({
   partners: Partner[];
   services: Svc[];
   /** Zelle and cash taken in per sale (all of it lands in your personal account). */
-  collected?: Record<string, { zelle: number; cash: number }>;
+  collected?: Record<string, { zelle: number; cash: number; card: number; stripeFee: number; feeEstimated: boolean }>;
   /** Expenses you paid out of pocket that nobody has paid you back for. */
   owed?: OwedExpense[];
   /** Zelle/cash orders not paid yet, per sale. Not counted until they are marked paid. */
@@ -56,11 +56,12 @@ export function AccountView({
   // Per sale: Zelle + cash you took in, minus what you already moved into the Char'd account for that sale.
   const toMove = services
     .map((s) => {
-      const c = collected[s.id] ?? { zelle: 0, cash: 0 };
+      const c = collected[s.id] ?? { zelle: 0, cash: 0, card: 0, stripeFee: 0, feeEstimated: false };
       const moved = transactions.filter((t) => t.kind === "deposit" && t.service_id === s.id).reduce((a, t) => a + t.amount_cents, 0);
-      return { s, zelle: c.zelle, cash: c.cash, moved, due: c.zelle + c.cash - moved };
+      const netCard = c.card - c.stripeFee;
+      return { s, zelle: c.zelle, cash: c.cash, card: c.card, fee: c.stripeFee, feeEstimated: c.feeEstimated, moved, due: c.zelle + c.cash + netCard - moved };
     })
-    .filter((r) => r.due !== 0 && r.zelle + r.cash > 0);
+    .filter((r) => r.due !== 0 && r.zelle + r.cash + r.card > 0);
   const dueTotal = toMove.reduce((a, r) => a + Math.max(r.due, 0), 0);
 
   // Keep what you're owed: instead of moving everything and paying yourself back, move the difference.
@@ -72,7 +73,7 @@ export function AccountView({
 
   function moveIt() {
     const what = kept
-      ? `Record ${formatCents(dueTotal)} of Zelle + cash as deposited, mark ${keptList.length} expense${keptList.length === 1 ? "" : "s"} (${formatCents(kept)}) as paid back to you, and treat ${formatCents(transfer)} as transferred?`
+      ? `Record ${formatCents(dueTotal)} of sales money as deposited, mark ${keptList.length} expense${keptList.length === 1 ? "" : "s"} (${formatCents(kept)}) as paid back to you, and treat ${formatCents(transfer)} as transferred?`
       : `Record ${formatCents(transfer)} moved into the Char'd account?`;
     if (!confirm(what)) return;
     startTransition(async () => {
@@ -123,7 +124,7 @@ export function AccountView({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Transfer to the Char&rsquo;d account</div>
             <div className={`text-4xl font-bold tabular-nums ${transfer < 0 ? "text-red-700" : "text-green-700"}`}>{formatCents(Math.max(transfer, 0))}</div>
             <div className="text-xs text-ink/60">
-              {formatCents(dueTotal)} Zelle + cash you took in{kept ? ` − ${formatCents(kept)} you're keeping for expenses you paid` : ""}. Card payments reach the business through Stripe, so they&rsquo;re not in here.
+              {formatCents(dueTotal)} that reached your account{kept ? ` − ${formatCents(kept)} you're keeping for expenses you paid` : ""}. Card money counts after Stripe&rsquo;s fee; Stripe pays it out to you a couple of days after the sale.
             </div>
           </div>
           <ul className="divide-y divide-line">
@@ -134,7 +135,7 @@ export function AccountView({
                     {r.s.name} · {fmtDateOnly(r.s.service_date, "MMM d")}
                   </div>
                   <div className="text-xs text-ink/60">
-                    {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
+                    {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.card ? ` + ${formatCents(r.card)} card − ${formatCents(r.fee)} Stripe fee${r.feeEstimated ? " (est.)" : ""}` : ""}{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
                   </div>
                   {(unpaid[r.s.id] ?? []).length > 0 && (
                     <div className="mt-0.5 text-xs text-amber-800">
