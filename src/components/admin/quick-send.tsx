@@ -159,6 +159,17 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
     setOpen(false);
   }
 
+  // Every message is a ready-made link: one tap opens Texts or WhatsApp with it filled in. Nothing loads from the server.
+  const linkFor = (body: string) => (channel === "whatsapp" ? whatsAppLink(o.customer_phone, body) : smsLink(o.customer_phone, body));
+  const menuItems = (templates.length ? templates : DEFAULT_TEMPLATES)
+    .filter((t) => (o.fulfillment === "delivery" ? true : !["out_for_delivery", "delivery_arriving"].includes(t.key)))
+    .flatMap((t) =>
+      t.key === "running_behind"
+        ? [10, 20].map((min) => ({ id: `${t.key}-${min}`, key: t.key, name: `Running ~${min} min behind`, body: renderMessage(t.body, messageVars(o, settings, { eta_minutes: min })) }))
+        : [{ id: t.key, key: t.key, name: t.name, body: renderMessage(t.body, messageVars(o, settings)) }],
+    )
+    .map((m) => ({ ...m, href: linkFor(m.body) }));
+
   return (
     <div ref={ref} className="relative inline-block">
       <button
@@ -178,24 +189,21 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
               </button>
             ))}
           </div>
-          {templates.length === 0 &&
-            (failed ? (
-              <div className="px-2 py-1.5 text-xs text-ink/70">
-                Couldn&rsquo;t load messages. The app was probably just updated.
-                <button type="button" onClick={() => window.location.reload()} className="mt-1.5 block w-full rounded-lg bg-ember px-2 py-2 text-sm font-semibold text-white">
-                  Reload page
-                </button>
-              </div>
-            ) : (
-              <div className="px-2 py-1.5 text-xs text-ink/50">Loading…</div>
-            ))}
-          {templates
-            .filter((t) => (o.fulfillment === "delivery" ? true : !["out_for_delivery", "delivery_arriving"].includes(t.key)))
-            .map((t) => (
-              <button key={t.key} onClick={() => send(t)} className="block w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-cream">
-                {t.name}
-              </button>
-            ))}
+          {menuItems.map((m) => (
+            <a
+              key={m.id}
+              href={m.href}
+              target={channel === "whatsapp" ? "_blank" : undefined}
+              rel="noreferrer"
+              onClick={() => {
+                logMessage({ order_id: o.id, template_key: m.key, channel, recipient: o.customer_phone, body: m.body }).catch(() => {});
+                setTimeout(() => setOpen(false), 400);
+              }}
+              className="block w-full rounded-lg px-2 py-2.5 text-left text-sm hover:bg-cream"
+            >
+              {m.name}
+            </a>
+          ))}
           <button
             onClick={() => {
               const text = prompt(`Message to ${o.customer_name}:`, `Hi ${o.customer_name.split(" ")[0]}, `);
