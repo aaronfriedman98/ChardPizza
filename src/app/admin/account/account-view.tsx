@@ -22,7 +22,18 @@ const KIND_LABEL: Record<AccountTransaction["kind"], string> = {
   other: "Other",
 };
 
-export function AccountView({ transactions, partners, services }: { transactions: AccountTransaction[]; partners: Partner[]; services: Svc[] }) {
+export function AccountView({
+  transactions,
+  partners,
+  services,
+  collected = {},
+}: {
+  transactions: AccountTransaction[];
+  partners: Partner[];
+  services: Svc[];
+  /** Zelle and cash taken in per sale (all of it lands in your personal account). */
+  collected?: Record<string, { zelle: number; cash: number }>;
+}) {
   const [modal, setModal] = useState<"deposit" | "partner_draw" | "other" | "set" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useBusyTransition();
@@ -34,6 +45,26 @@ export function AccountView({ transactions, partners, services }: { transactions
   const monthIn = transactions.filter((t) => t.txn_date.startsWith(thisMonth) && t.amount_cents > 0 && t.kind !== "opening_balance").reduce((a, t) => a + t.amount_cents, 0);
   const monthOut = transactions.filter((t) => t.txn_date.startsWith(thisMonth) && t.amount_cents < 0).reduce((a, t) => a - t.amount_cents, 0);
   const draws = partners.filter((p) => p.is_partner).map((p) => ({ p, total: transactions.filter((t) => t.kind === "partner_draw" && t.partner_id === p.id).reduce((a, t) => a - t.amount_cents, 0) }));
+
+  // Per sale: Zelle + cash you took in, minus what you already moved into the Char'd account for that sale.
+  const toMove = services
+    .map((s) => {
+      const c = collected[s.id] ?? { zelle: 0, cash: 0 };
+      const moved = transactions.filter((t) => t.kind === "deposit" && t.service_id === s.id).reduce((a, t) => a + t.amount_cents, 0);
+      return { s, zelle: c.zelle, cash: c.cash, moved, due: c.zelle + c.cash - moved };
+    })
+    .filter((r) => r.due !== 0 && r.zelle + r.cash > 0);
+  const dueTotal = toMove.reduce((a, r) => a + Math.max(r.due, 0), 0);
+
+  function recordTransfer(r: (typeof toMove)[number]) {
+    if (!confirm(`Record ${formatCents(r.due)} moved into the Char'd account for ${r.s.name}?`)) return;
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    startTransition(async () => {
+      const res = await addTransaction({ kind: "deposit", txn_date: today, amount: (r.due / 100).toFixed(2), direction: "in", description: `Zelle + cash from ${r.s.name} (${fmtDateOnly(r.s.service_date, "MMM d")})`, partner_id: "", service_id: r.s.id });
+      if (res.error) setMessage(res.error);
+    });
+  }
 
   // Running balance, oldest first, then shown newest first.
   const withRunning = useMemo(() => {
@@ -70,6 +101,40 @@ export function AccountView({ transactions, partners, services }: { transactions
         <Tile label="In this month" value={formatCents(monthIn)} tone="green" />
         <Tile label="Out this month" value={formatCents(monthOut)} tone="amber" />
       </div>
+
+      {toMove.length > 0 && (
+        <div className="card space-y-3 border-2 border-green-300">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Move into the Char&rsquo;d account</div>
+            <div className="text-3xl font-bold tabular-nums text-green-700">{formatCents(dueTotal)}</div>
+            <div className="text-xs text-ink/60">Zelle and cash customers paid you, not yet moved over. Card payments go to the business through Stripe, so they&rsquo;re not in here.</div>
+          </div>
+          <ul className="divide-y divide-line">
+            {toMove.map((r) => (
+              <li key={r.s.id} className="flex flex-wrap items-center gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold">
+                    {r.s.name} · {fmtDateOnly(r.s.service_date, "MMM d")}
+                  </div>
+                  <div className="text-xs text-ink/60">
+                    {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
+                  </div>
+                </div>
+                {r.due > 0 ? (
+                  <>
+                    <div className="text-lg font-bold tabular-nums">{formatCents(r.due)}</div>
+                    <button disabled={pending} onClick={() => recordTransfer(r)} className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">
+                      ✓ I moved it
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-sm text-amber-800">Moved {formatCents(-r.due)} more than you took in</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {draws.some((d) => d.total > 0) && (
         <div className="card text-sm">
