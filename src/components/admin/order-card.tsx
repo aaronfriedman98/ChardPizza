@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import type { Settings } from "@/lib/types";
 import { type Order, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgency, firstName } from "@/lib/orders";
 import { formatCents, formatPhone } from "@/lib/format";
@@ -28,10 +28,11 @@ export function OrderCard({
   mode?: "board" | "handoff" | "delivery";
   onError?: (m: string) => void;
 }) {
-  const [pending, startTransition] = useTransition();
   const [confirmPickup, setConfirmPickup] = useState(false);
-  // Which button on this card was tapped, so only that one shows the spinner.
-  const [busyKey, setBusyKey] = useState<string | null>(null);
+  // Buttons that are saving right now. Each tap runs on its own, so tapping Ready on three cards
+  // (or two buttons on one card) never waits for or blocks the others.
+  const [busy, setBusy] = useState<Set<string>>(() => new Set());
+  const armed = useRef<string | null>(null);
   const u = urgency(o, now, thresholds);
   const behind = minutesBehind(o, now);
   const ready = minutesReady(o, now);
@@ -39,8 +40,12 @@ export function OrderCard({
   const done = o.status === "completed" || o.status === "cancelled";
 
   function run(fn: () => Promise<{ error?: string }>) {
+    const key = armed.current ?? "action";
+    armed.current = null;
+    if (busy.has(key)) return; // same button tapped twice while saving
+    setBusy((b) => new Set(b).add(key));
     beginBusy();
-    startTransition(async () => {
+    void (async () => {
       try {
         const r = await fn();
         if (r.error) {
@@ -51,10 +56,15 @@ export function OrderCard({
         toast("That didn't go through. Try again.", "error");
       } finally {
         endBusy();
-        setBusyKey(null);
+        setBusy((b) => {
+          const n = new Set(b);
+          n.delete(key);
+          return n;
+        });
       }
-    });
+    })();
   }
+  const B = { busyKeys: busy, arm: (k: string) => (armed.current = k) };
 
   function complete() {
     if (!paid && !confirmPickup) {
@@ -78,27 +88,6 @@ export function OrderCard({
               ? "border-ember/60"
               : "border-line";
 
-  const Btn = ({ children, onClick, primary, danger }: { children: React.ReactNode; onClick: () => void; primary?: boolean; danger?: boolean }) => {
-    const key = typeof children === "string" ? children : String(children);
-    const mine = pending && busyKey === key;
-    return (
-      <button
-        type="button"
-        disabled={pending}
-        aria-busy={mine}
-        onClick={() => {
-          setBusyKey(key);
-          onClick();
-        }}
-        className={`busy-btn rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60 ${
-          primary ? "bg-ember text-white hover:bg-ember/90" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
-        }`}
-      >
-        <span className="busy-label">{children}</span>
-        {mine && <Spinner className="busy-spinner" />}
-      </button>
-    );
-  };
 
   return (
     <article className={`rounded-2xl border-2 bg-white p-3.5 shadow-sm ${tone} ${o.is_on_hold ? "bg-ink/5" : ""}`}>
@@ -159,50 +148,50 @@ export function OrderCard({
       {!done && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {(o.status === "making" || o.status === "confirmed") && (
-            <Btn primary onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Ready</Btn>
+            <CardButton {...B} primary onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Ready</CardButton>
           )}
           {o.status === "ready" && o.fulfillment === "pickup" && (
-            <Btn primary onClick={complete}>
+            <CardButton {...B} primary onClick={complete}>
               Picked up
-            </Btn>
+            </CardButton>
           )}
           {o.status === "ready" && o.fulfillment === "delivery" && (
-            <Btn primary onClick={() => run(() => setOrderStatus(o.id, "out_for_delivery"))}>
+            <CardButton {...B} primary onClick={() => run(() => setOrderStatus(o.id, "out_for_delivery"))}>
               Out for delivery
-            </Btn>
+            </CardButton>
           )}
           {o.status === "out_for_delivery" && (
-            <Btn primary onClick={complete}>
+            <CardButton {...B} primary onClick={complete}>
               Delivered
-            </Btn>
+            </CardButton>
           )}
-          {!paid && <Btn onClick={() => run(() => markPaid(o.id))}>Mark paid</Btn>}
+          {!paid && <CardButton {...B} onClick={() => run(() => markPaid(o.id))}>Mark paid</CardButton>}
           <ConfirmText order={o} settings={thresholds} />
           <PriceText order={o} settings={thresholds} />
           <QuickSend order={o} settings={thresholds} />
           {mode === "board" && <ChangePies order={o} />}
           {paid && mode === "board" && (
-            <Btn onClick={() => confirm("Undo Mark Paid on this order?") && run(() => markUnpaid(o.id))}>Undo paid</Btn>
+            <CardButton {...B} onClick={() => confirm("Undo Mark Paid on this order?") && run(() => markUnpaid(o.id))}>Undo paid</CardButton>
           )}
           {mode === "board" && (
             <>
               {o.status !== "ready" && o.status !== "out_for_delivery" && (
                 <>
-                  <Btn onClick={() => run(() => setFlag(o.id, "customer_arrived", !o.customer_arrived))}>{o.customer_arrived ? "Not here" : "Here"}</Btn>
-                  <Btn onClick={() => run(() => setFlag(o.id, "is_rush", !o.is_rush))}>{o.is_rush ? "Undo make now" : "Make now"}</Btn>
-                  <Btn onClick={() => run(() => setFlag(o.id, "is_on_hold", !o.is_on_hold))}>{o.is_on_hold ? "Release" : "Hold"}</Btn>
+                  <CardButton {...B} onClick={() => run(() => setFlag(o.id, "customer_arrived", !o.customer_arrived))}>{o.customer_arrived ? "Not here" : "Here"}</CardButton>
+                  <CardButton {...B} onClick={() => run(() => setFlag(o.id, "is_rush", !o.is_rush))}>{o.is_rush ? "Undo make now" : "Make now"}</CardButton>
+                  <CardButton {...B} onClick={() => run(() => setFlag(o.id, "is_on_hold", !o.is_on_hold))}>{o.is_on_hold ? "Release" : "Hold"}</CardButton>
                   <span className="inline-flex overflow-hidden rounded-lg bg-cream">
-                    <button disabled={pending} onClick={() => run(() => movePriority(o.id, "up"))} className="px-2 py-2 text-sm hover:bg-line" aria-label="Move up">
+                    <button disabled={busy.has("up")} onClick={() => { armed.current = "up"; run(() => movePriority(o.id, "up")); }} className="px-2 py-2 text-sm hover:bg-line" aria-label="Move up">
                       ▲
                     </button>
-                    <button disabled={pending} onClick={() => run(() => movePriority(o.id, "down"))} className="px-2 py-2 text-sm hover:bg-line" aria-label="Move down">
+                    <button disabled={busy.has("down")} onClick={() => { armed.current = "down"; run(() => movePriority(o.id, "down")); }} className="px-2 py-2 text-sm hover:bg-line" aria-label="Move down">
                       ▼
                     </button>
                   </span>
                 </>
               )}
-              {o.status === "ready" && <Btn onClick={() => run(() => setOrderStatus(o.id, "confirmed"))}>Not ready</Btn>}
-              <Btn
+              {o.status === "ready" && <CardButton {...B} onClick={() => run(() => setOrderStatus(o.id, "confirmed"))}>Not ready</CardButton>}
+              <CardButton {...B}
                 danger
                 onClick={() => {
                   const reason = prompt("Cancel this order? Reason (optional):");
@@ -211,21 +200,21 @@ export function OrderCard({
                 }}
               >
                 Cancel
-              </Btn>
+              </CardButton>
             </>
           )}
         </div>
       )}
       {done && o.status === "completed" && mode === "board" && (
         <div className="mt-2">
-          <Btn onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Undo pickup</Btn>
+          <CardButton {...B} onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Undo pickup</CardButton>
         </div>
       )}
 
       {confirmPickup && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-2 text-sm">
           <span className="font-semibold text-amber-900">Not marked paid.</span>
-          <Btn
+          <CardButton {...B}
             primary
             onClick={() => {
               setConfirmPickup(false);
@@ -237,14 +226,51 @@ export function OrderCard({
             }}
           >
             Mark paid & hand off
-          </Btn>
-          <Btn onClick={complete}>Hand off anyway</Btn>
+          </CardButton>
+          <CardButton {...B} onClick={complete}>Hand off anyway</CardButton>
           <button className="text-ink/60 underline" onClick={() => setConfirmPickup(false)}>
             Never mind
           </button>
         </div>
       )}
     </article>
+  );
+}
+
+// Defined once, outside the card, so a redraw never swaps the button out from under a finger mid-tap.
+function CardButton({
+  children,
+  onClick,
+  primary,
+  danger,
+  busyKeys,
+  arm,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  primary?: boolean;
+  danger?: boolean;
+  busyKeys: Set<string>;
+  arm: (k: string) => void;
+}) {
+  const key = typeof children === "string" ? children : String(children);
+  const mine = busyKeys.has(key);
+  return (
+    <button
+      type="button"
+      disabled={mine}
+      aria-busy={mine}
+      onClick={() => {
+        arm(key);
+        onClick();
+      }}
+      className={`busy-btn rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60 ${
+        primary ? "bg-ember text-white hover:bg-ember/90" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
+      }`}
+    >
+      <span className="busy-label">{children}</span>
+      {mine && <Spinner className="busy-spinner" />}
+    </button>
   );
 }
 
