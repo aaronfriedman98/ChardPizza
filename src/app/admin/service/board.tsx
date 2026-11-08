@@ -22,12 +22,15 @@ export function ServiceBoard({
   orders,
   settings,
   candidates,
+  expenseCents = 0,
 }: {
   service: Service;
   availability: ServiceAvailability;
   orders: Order[];
   settings: Settings;
   candidates: Service[];
+  /** Expenses tied to this sale on the Expenses page. */
+  expenseCents?: number;
 }) {
   const router = useRouter();
   const tz = settings.time_zone;
@@ -53,6 +56,9 @@ export function ServiceBoard({
   const waiting = active.filter((o) => o.status === "ready" && o.fulfillment === "pickup").length;
   const health = avgBehind === 0 ? "On schedule" : avgBehind < settings.late_critical_minutes ? "Slightly behind" : "Kitchen backed up";
   const healthTone = avgBehind === 0 ? "bg-green-100 text-green-800" : avgBehind < settings.late_critical_minutes ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-800";
+  // Same math as Reports: sales from real orders (not unfinished card checkouts) minus this sale's expenses.
+  const sales = orders.filter((o) => o.status !== "cancelled" && o.status !== "pending_payment").reduce((a, o) => a + o.total_cents, 0);
+  const profit = sales - expenseCents;
   const nextUp = active.filter((o) => o.status === "confirmed" || o.status === "making").sort(queueSort)[0];
   const paused = s.ordering_override === "paused";
 
@@ -167,11 +173,14 @@ export function ServiceBoard({
       )}
 
       {/* metrics */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         <Stat label="Dough used" value={`${Number(availability.units_sold) + Number(availability.units_wasted)} / ${s.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} left${Number(availability.units_wasted) ? ` · ${Number(availability.units_wasted)} lost` : ""}`} />
         <Stat label="Orders" value={String(live.length)} sub={`${live.filter((o) => o.fulfillment === "pickup").length} pickup · ${live.filter((o) => o.fulfillment === "delivery").length} delivery`} />
         <Stat label="Revenue" value={formatCents(revenue)} sub={`${formatCents(paidTotal)} paid`} />
         <Stat label="Outstanding" value={formatCents(revenue - paidTotal)} sub={`${live.filter((o) => o.payment_status !== "paid").length} unpaid`} tone={revenue - paidTotal > 0 ? "amber" : "green"} />
+        <Link href={`/admin/expenses?service=${s.id}`} className="block">
+          <Stat label="Profit" value={formatCents(profit)} sub={expenseCents ? `${formatCents(expenseCents)} expenses` : "no expenses added"} tone={profit >= 0 ? "green" : "red"} />
+        </Link>
         <Stat label="Next up" value={nextUp ? fmtTime(nextUp.scheduled_at, tz) : "—"} sub={nextUp ? nextUp.customer_name : "queue empty"} />
         <div className="card flex flex-col justify-center p-3">
           <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold ${healthTone}`}>{health}</span>
@@ -246,11 +255,11 @@ export function ServiceBoard({
   );
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "amber" | "green" }) {
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "amber" | "green" | "red" }) {
   return (
     <div className="card p-3">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">{label}</div>
-      <div className={`text-xl font-bold tabular-nums ${tone === "amber" ? "text-amber-700" : tone === "green" ? "text-green-700" : ""}`}>{value}</div>
+      <div className={`text-xl font-bold tabular-nums ${tone === "amber" ? "text-amber-700" : tone === "green" ? "text-green-700" : tone === "red" ? "text-red-700" : ""}`}>{value}</div>
       {sub && <div className="truncate text-xs text-ink/60">{sub}</div>}
     </div>
   );

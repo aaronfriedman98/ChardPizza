@@ -26,6 +26,10 @@ export default async function ServiceBoardPage({ searchParams }: PageProps<"/adm
     );
   }
 
-  const orders = await loadServiceOrders(supabase, service.id);
-  return <ServiceBoard service={service} availability={availability} orders={orders} settings={settings} candidates={candidates} />;
+  const [orders, { data: expenseRows }] = await Promise.all([
+    loadServiceOrders(supabase, service.id),
+    supabase.from("expenses").select("amount_cents").eq("service_id", service.id).is("deleted_at", null),
+  ]);
+  const expenseCents = (expenseRows ?? []).reduce((a, e) => a + (e.amount_cents as number), 0);
+  return <ServiceBoard service={service} availability={availability} orders={orders} settings={settings} candidates={candidates} expenseCents={expenseCents} />;
 }
