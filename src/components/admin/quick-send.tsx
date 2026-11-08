@@ -107,14 +107,28 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState<MessageTemplate[]>(cache ?? []);
   const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open || cache) return;
-    getMessageTemplates().then((t) => {
-      cache = t;
-      setTemplates(t);
-    });
+    let gone = false;
+    // A page opened before the latest deploy can't reach the server anymore; say so instead of hanging.
+    const timer = setTimeout(() => !gone && setFailed(true), 8000);
+    getMessageTemplates()
+      .then((t) => {
+        if (gone) return;
+        clearTimeout(timer);
+        if (!t.length) return setFailed(true);
+        cache = t;
+        setTemplates(t);
+        setFailed(false);
+      })
+      .catch(() => !gone && setFailed(true));
+    return () => {
+      gone = true;
+      clearTimeout(timer);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -137,7 +151,7 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
     const body = template ? renderMessage(template.body, messageVars(o, settings, extras)) : (customBody ?? "");
     if (!body) return;
     const url = channel === "whatsapp" ? whatsAppLink(o.customer_phone, body) : smsLink(o.customer_phone, body);
-    if (channel === "sms") window.location.href = url;
+    if (channel === "sms") window.location.assign(url);
     else window.open(url, "_blank", "noopener");
     void logMessage({ order_id: o.id, template_key: template?.key ?? null, channel, recipient: o.customer_phone, body });
     setOpen(false);
@@ -162,7 +176,17 @@ export function QuickSend({ order: o, settings, compact }: { order: Order; setti
               </button>
             ))}
           </div>
-          {templates.length === 0 && <div className="px-2 py-1.5 text-xs text-ink/50">Loading…</div>}
+          {templates.length === 0 &&
+            (failed ? (
+              <div className="px-2 py-1.5 text-xs text-ink/70">
+                Couldn&rsquo;t load messages. The app was probably just updated.
+                <button type="button" onClick={() => window.location.reload()} className="mt-1.5 block w-full rounded-lg bg-ember px-2 py-2 text-sm font-semibold text-white">
+                  Reload page
+                </button>
+              </div>
+            ) : (
+              <div className="px-2 py-1.5 text-xs text-ink/50">Loading…</div>
+            ))}
           {templates
             .filter((t) => (o.fulfillment === "delivery" ? true : !["out_for_delivery", "delivery_arriving"].includes(t.key)))
             .map((t) => (
