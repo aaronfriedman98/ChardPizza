@@ -19,7 +19,7 @@ const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
 };
 
 function touch() {
-  for (const p of ["/admin", "/admin/service", "/admin/kitchen", "/admin/handoff", "/admin/delivery", "/admin/orders"]) revalidatePath(p);
+  revalidatePath("/admin", "layout");
 }
 
 async function getOrder(supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"], id: string) {

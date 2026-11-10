@@ -16,6 +16,7 @@ export const NAV = [
   { href: "/admin/customers", label: "Customers", icon: "☺" },
   { href: "/admin/expenses", label: "Expenses", icon: "$" },
   { href: "/admin/account", label: "Account", icon: "🏦" },
+  { href: "/admin/settle", label: "Settle up", icon: "⇄" },
   { href: "/admin/reports", label: "Reports", icon: "▥" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
   { href: "/admin/guide", label: "How-to guide", icon: "?" },
@@ -25,7 +26,7 @@ export const NAV = [
 const MOBILE = ["/admin", "/admin/service", "/admin/kitchen", "/admin/handoff"];
 
 function isActive(pathname: string, href: string) {
-  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+  return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/");
 }
 
 export function SideNav() {

@@ -216,7 +216,7 @@ export function OrderCard({
           )}
         </div>
       )}
-      {done && o.status === "completed" && mode === "board" && (
+      {done && o.status === "completed" && (mode === "board" || !paid) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {/* Handed off but not paid yet: still settle it right here. */}
           {!paid && <CardButton {...B} primary onClick={() => run(() => markPaid(o.id))}>Mark paid</CardButton>}

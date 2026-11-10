@@ -178,7 +178,7 @@ export function ServiceBoard({
         <Stat label="Orders" value={String(live.length)} sub={`${live.filter((o) => o.fulfillment === "pickup").length} pickup · ${live.filter((o) => o.fulfillment === "delivery").length} delivery`} />
         <Stat label="Revenue" value={formatCents(revenue)} sub={`${formatCents(paidTotal)} paid`} />
         <Stat label="Outstanding" value={formatCents(revenue - paidTotal)} sub={`${live.filter((o) => o.payment_status !== "paid").length} unpaid`} tone={revenue - paidTotal > 0 ? "amber" : "green"} />
-        <Link href={`/admin/expenses?service=${s.id}`} className="block">
+        <Link href={`/admin/services/${s.id}/summary`} className="block">
           <Stat label="Profit" value={formatCents(profit)} sub={expenseCents ? `${formatCents(expenseCents)} expenses` : "no expenses added"} tone={profit >= 0 ? "green" : "red"} />
         </Link>
         <Stat label="Next up" value={nextUp ? fmtTime(nextUp.scheduled_at, tz) : "—"} sub={nextUp ? nextUp.customer_name : "queue empty"} />

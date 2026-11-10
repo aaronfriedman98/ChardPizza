@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useBusyTransition } from "@/components/admin/feedback";
 import { useMemo, useState } from "react";
 import type { AdminUser, Expense, ExpenseCategory, Service } from "@/lib/types";
@@ -20,6 +21,7 @@ export function ExpensesView({
   partners,
   me,
   initialServiceId,
+  initialAdd = false,
 }: {
   expenses: Expense[];
   categories: ExpenseCategory[];
@@ -27,8 +29,10 @@ export function ExpensesView({
   partners: Partner[];
   me: string;
   initialServiceId?: string;
+  /** Open the Add form right away (linked from a sale's summary). */
+  initialAdd?: boolean;
 }) {
-  const [editing, setEditing] = useState<Expense | "new" | null>(null);
+  const [editing, setEditing] = useState<Expense | "new" | null>(initialAdd ? "new" : null);
   const [filterService, setFilterService] = useState(initialServiceId ?? "");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPaidBy, setFilterPaidBy] = useState("");
@@ -62,7 +66,7 @@ export function ExpensesView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Expenses</h1>
-          <p className="text-sm text-ink/60">Everything the business spends. Tie an expense to a sale night to see that night&rsquo;s profit.</p>
+          <p className="text-sm text-ink/60">Everything the business spends, each tied to the sale it was for, so every sale shows its real profit.</p>
         </div>
         <button className="btn-primary" onClick={() => setEditing("new")}>
           + Add expense
@@ -79,7 +83,10 @@ export function ExpensesView({
           <button type="button" onClick={payBackAll} disabled={pending} className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">
             ✓ Mark all {formatCents(owed)} paid back
           </button>
-          <span className="text-xs text-ink/60">Clears Owed to partners. Each expense can still be flipped back one at a time.</span>
+          <span className="text-xs text-ink/60">Only if Char&rsquo;d paid you back from its account.</span>
+          <Link href="/admin/settle" className="text-sm font-semibold text-ember hover:underline">
+            Or settle up with sales money →
+          </Link>
         </div>
       )}
 
@@ -129,7 +136,7 @@ export function ExpensesView({
               </div>
               <div className="truncate text-sm text-ink/60">
                 {e.description}
-                {e.service_id && <span> · {svcName.get(e.service_id) ?? "service"}</span>}
+                {e.service_id ? <span> · {svcName.get(e.service_id) ?? "service"}</span> : <span className="font-semibold text-amber-700"> · No sale picked, tap to fix</span>}
                 {e.receipt_url && <span> · 📎</span>}
               </div>
             </button>
@@ -193,6 +200,9 @@ function ExpenseForm({
   onError: (m: string) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
+  // New expenses default to the filtered sale, else the latest sale that has already happened.
+  const localToday = new Date().toLocaleDateString("en-CA");
+  const latestSale = services.find((s) => s.service_date <= localToday)?.id ?? services[0]?.id ?? "";
   const [form, setForm] = useState({
     expense_date: e?.expense_date ?? today,
     amount: e ? centsToDollarsInput(e.amount_cents) : "",
@@ -200,7 +210,7 @@ function ExpenseForm({
     vendor: e?.vendor ?? "",
     description: e?.description ?? "",
     receipt_url: e?.receipt_url ?? "",
-    service_id: e?.service_id ?? defaultServiceId ?? "",
+    service_id: e?.service_id ?? (defaultServiceId || latestSale),
     paid_by: (e?.paid_by ?? "partner") as "business" | "partner",
     paid_by_admin_id: e?.paid_by_admin_id ?? me,
     is_reimbursable: e?.is_reimbursable ?? true,
@@ -293,9 +303,11 @@ function ExpenseForm({
           <input value={form.vendor} onChange={(ev) => set({ vendor: ev.target.value })} className="input" placeholder="Costco, Restaurant Depot…" />
         </label>
         <label className="block">
-          <span className="label">Service (optional)</span>
-          <select value={form.service_id} onChange={(ev) => set({ service_id: ev.target.value })} className="input">
-            <option value="">Not tied to a sale</option>
+          <span className="label">Which sale</span>
+          <select value={form.service_id} onChange={(ev) => set({ service_id: ev.target.value })} className="input" required>
+            <option value="" disabled>
+              Pick a sale…
+            </option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} · {s.service_date}

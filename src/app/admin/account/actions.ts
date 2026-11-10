@@ -5,8 +5,6 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { dollarsToCents } from "@/lib/format";
-import { fmtDate, fmtDateOnly } from "@/lib/time";
-import { moneyBySale, netIn } from "@/lib/transfer";
 
 export type Result = { error?: string; ok?: string };
 
@@ -23,7 +21,7 @@ const schema = z.object({
 });
 
 function touch() {
-  for (const p of ["/admin/account", "/admin", "/admin/reports", "/admin/expenses"]) revalidatePath(p);
+  revalidatePath("/admin", "layout");
 }
 
 export async function addTransaction(input: unknown): Promise<Result> {
@@ -86,77 +84,4 @@ export async function deleteTransaction(id: string): Promise<Result> {
   await audit(supabase, admin.id, "account.entry_deleted", "account_transaction", id);
   touch();
   return { ok: "" };
-}
-
-const transferSchema = z.object({ expense_ids: z.array(z.string().uuid()).max(200) });
-
-/**
- * "I transferred it": records the Zelle + cash you took in as deposits (one per sale), and marks the
- * expenses you chose to keep as paid back. Both are worked out here from the database, not from the page.
- * Net effect on the Char'd balance = what you actually transferred.
- */
-export async function recordTransfer(input: unknown): Promise<Result & { transferred_cents?: number }> {
-  const { supabase, admin } = await requireAdmin();
-  const parsed = transferSchema.safeParse(input);
-  if (!parsed.success) return { error: "Check the expenses you picked." };
-  const keepIds = parsed.data.expense_ids;
-
-  const [money, { data: deposits }, { data: services }, { data: settings }] = await Promise.all([
-    moneyBySale(supabase),
-    supabase.from("account_transactions").select("service_id, amount_cents").eq("kind", "deposit").not("service_id", "is", null),
-    supabase.from("services").select("id, name, service_date"),
-    supabase.from("settings").select("time_zone").eq("id", true).single(),
-  ]);
-  const due = new Map<string, number>();
-  for (const [sid, m] of money) due.set(sid, netIn(m));
-  for (const d of deposits ?? []) due.set(d.service_id!, (due.get(d.service_id!) ?? 0) - d.amount_cents);
-  const lines = [...due.entries()].filter(([, cents]) => cents > 0);
-  const collected = lines.reduce((sum, [, c]) => sum + c, 0);
-
-  let kept = 0;
-  if (keepIds.length) {
-    const { data: exp } = await supabase
-      .from("expenses")
-      .select("id, amount_cents")
-      .in("id", keepIds)
-      .eq("paid_by", "partner")
-      .eq("paid_by_admin_id", admin.id)
-      .eq("is_reimbursable", true)
-      .is("reimbursed_at", null)
-      .is("deleted_at", null);
-    if ((exp ?? []).length !== keepIds.length) return { error: "One of those expenses changed. Reload the page and try again." };
-    kept = (exp ?? []).reduce((sum, e) => sum + e.amount_cents, 0);
-  }
-  const transferred = collected - kept;
-  if (collected <= 0) return { error: "Nothing to move right now." };
-  if (transferred < 0) return { error: "You picked more to keep than you took in. Uncheck some expenses." };
-
-  const today = fmtDate(new Date().toISOString(), settings?.time_zone ?? "America/Detroit", "yyyy-MM-dd");
-  const byId = new Map((services ?? []).map((s) => [s.id, s]));
-  const rows = lines.map(([service_id, amount_cents]) => {
-    const s = byId.get(service_id);
-    return {
-      kind: "deposit" as const,
-      txn_date: today,
-      amount_cents,
-      service_id,
-      created_by: admin.id,
-      description: s ? `Sales money from ${s.name} (${fmtDateOnly(s.service_date, "MMM d")})` : "Sales money from a sale",
-    };
-  });
-  const { data: inserted, error } = await supabase.from("account_transactions").insert(rows).select("id");
-  if (error) return { error: error.message };
-
-  if (keepIds.length) {
-    const { error: rErr } = await supabase.from("expenses").update({ reimbursed_at: new Date().toISOString() }).in("id", keepIds).is("reimbursed_at", null);
-    if (rErr) return { error: `The deposit was recorded, but marking your expenses paid back failed: ${rErr.message}. Mark them on the Expenses page.` };
-  }
-  await audit(supabase, admin.id, "account.transfer_in", "account_transaction", inserted?.[0]?.id ?? null, {
-    collected_cents: collected,
-    kept_cents: kept,
-    transferred_cents: transferred,
-    expense_ids: keepIds,
-  });
-  touch();
-  return { ok: "Recorded.", transferred_cents: transferred };
 }

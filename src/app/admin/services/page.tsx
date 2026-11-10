@@ -7,6 +7,8 @@ import { DuplicateButton } from "./duplicate-button";
 
 export const metadata = { title: "Services | Char'd Pizza" };
 
+const UPCOMING = ["draft", "scheduled", "live"];
+
 export default async function ServicesPage() {
   const { supabase } = await requireAdmin();
   const [{ data: settings }, { data: rows }] = await Promise.all([
@@ -22,9 +24,10 @@ export default async function ServicesPage() {
 
   function Row({ s }: { s: Service }) {
     const state = publicState(s, now);
+    const over = !UPCOMING.includes(s.status) || new Date(s.ends_at) < now;
     return (
       <li className="flex items-center gap-4 p-4">
-        <Link href={`/admin/services/${s.id}`} className="flex-1 min-w-0">
+        <Link href={over ? `/admin/services/${s.id}/summary` : `/admin/services/${s.id}`} className="flex-1 min-w-0">
           <div className="font-semibold truncate">{s.name}</div>
           <div className="text-sm text-ink/60">
             {fmtDateOnly(s.service_date)} · {fmtTime(s.starts_at, tz)} to {fmtTime(s.ends_at, tz)}
@@ -33,6 +36,9 @@ export default async function ServicesPage() {
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline text-xs uppercase tracking-wide text-ink/50">{STATUS_LABEL[s.status]}</span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATE_TONE[state]}`}>{STATE_LABEL[state]}</span>
+          <Link href={over ? `/admin/services/${s.id}` : `/admin/services/${s.id}/summary`} className="btn-ghost border border-line text-sm">
+            {over ? "Setup" : "Summary"}
+          </Link>
           <DuplicateButton id={s.id} />
         </div>
       </li>

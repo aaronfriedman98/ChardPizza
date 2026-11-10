@@ -37,7 +37,7 @@ async function orderCount(supabase: Awaited<ReturnType<typeof requireAdmin>>["su
 
 function touch(id?: string) {
   revalidatePath("/admin/services");
-  if (id) revalidatePath(`/admin/services/${id}`);
+  if (id) revalidatePath(`/admin/services/${id}`, "layout");
   revalidatePath("/admin");
   revalidatePath("/");
 }

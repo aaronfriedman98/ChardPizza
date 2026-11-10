@@ -17,7 +17,7 @@ const schema = z.object({
   vendor: optText,
   description: optText,
   receipt_url: optText,
-  service_id: z.string().uuid().or(z.literal("")),
+  service_id: z.string().uuid({ message: "Pick which sale this expense was for." }),
   paid_by: z.enum(["business", "partner"]),
   paid_by_admin_id: z.string().uuid().or(z.literal("")),
   is_reimbursable: z.boolean(),
@@ -40,7 +40,7 @@ export async function saveExpense(input: unknown): Promise<Result> {
     vendor: v.vendor,
     description: v.description,
     receipt_url: v.receipt_url,
-    service_id: v.service_id || null,
+    service_id: v.service_id,
     paid_by: v.paid_by,
     paid_by_admin_id: v.paid_by === "partner" ? v.paid_by_admin_id : null,
     is_reimbursable: v.paid_by === "partner" ? v.is_reimbursable : false,
@@ -58,8 +58,7 @@ export async function saveExpense(input: unknown): Promise<Result> {
     id = data.id as string;
     await audit(supabase, admin.id, "expense.created", "expense", data.id as string, row);
   }
-  revalidatePath("/admin/expenses");
-  revalidatePath("/admin/reports");
+  revalidatePath("/admin", "layout");
   return { ok: "Saved.", id };
 }
 
@@ -68,8 +67,7 @@ export async function setReimbursed(id: string, reimbursed: boolean): Promise<Re
   const { error } = await supabase.from("expenses").update({ reimbursed_at: reimbursed ? new Date().toISOString() : null }).eq("id", id);
   if (error) return { error: error.message };
   await audit(supabase, admin.id, reimbursed ? "expense.reimbursed" : "expense.unreimbursed", "expense", id);
-  revalidatePath("/admin/expenses");
-  revalidatePath("/admin/reports");
+  revalidatePath("/admin", "layout");
   return { ok: "" };
 }
 
@@ -88,8 +86,7 @@ export async function reimburseAll(ids: string[]): Promise<Result> {
     .select("id");
   if (error) return { error: error.message };
   for (const r of data ?? []) await audit(supabase, admin.id, "expense.reimbursed", "expense", r.id as string, { bulk: true });
-  revalidatePath("/admin/expenses");
-  revalidatePath("/admin/reports");
+  revalidatePath("/admin", "layout");
   return { ok: `Marked ${data?.length ?? 0} ${data?.length === 1 ? "expense" : "expenses"} paid back.` };
 }
 
@@ -98,8 +95,7 @@ export async function deleteExpense(id: string): Promise<Result> {
   const { error } = await supabase.from("expenses").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return { error: error.message };
   await audit(supabase, admin.id, "expense.deleted", "expense", id);
-  revalidatePath("/admin/expenses");
-  revalidatePath("/admin/reports");
+  revalidatePath("/admin", "layout");
   return { ok: "" };
 }
 

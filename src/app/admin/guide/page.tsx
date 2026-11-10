@@ -246,16 +246,18 @@ export default function GuidePage() {
       <Section id="after" title="9. After the night">
         <ul>
           <li>
-            Mark the last orders Picked up and <b>Cancel</b> any no-shows so the counts are honest.
+            Open the sale from <Link href="/admin/services">Services</Link>: its <b>Summary</b> has a checklist of what&rsquo;s left. Mark the last orders Picked up, tap{" "}
+            <b>✓ Paid</b> as people pay you after the fact, and <b>Cancel</b> any no-shows so the counts are honest.
           </li>
           <li>
-            <Link href="/admin/reports">Reports</Link> shows pies sold, revenue by payment type, lost pies, and expenses tagged to the sale.
+            <Link href="/admin/expenses">Expenses</Link>: add anything you forgot. Every expense is tied to a sale, so each sale shows its real profit.
           </li>
           <li>
-            <Link href="/admin/expenses">Expenses</Link>: add anything you forgot. Each one can be tagged to a sale and marked reimbursable so partners get paid back.
+            <Link href="/admin/settle">Settle up</Link>: all the sales money lands in your account and you pay for things yourself. It shows who owes whom (you owe
+            Char&rsquo;d, or Char&rsquo;d owes you), and one tap records it once you&rsquo;ve moved the money.
           </li>
           <li>
-            <Link href="/admin/account">Account</Link> is the business ledger: cash and Zelle in, Stripe payouts when they land, reimbursements out.
+            <Link href="/admin/account">Account</Link> is the Char&rsquo;d bank ledger. <Link href="/admin/reports">Reports</Link> has the deep numbers per sale.
           </li>
           <li>Card money arrives in the bank from Stripe a few days later, minus Stripe&rsquo;s fee. The customer paid that fee as the 4% line.</li>
         </ul>

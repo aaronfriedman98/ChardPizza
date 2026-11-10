@@ -21,6 +21,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/admin/e
       partners={(partners ?? []) as Pick<AdminUser, "id" | "display_name" | "is_partner">[]}
       me={admin.id}
       initialServiceId={typeof sp.service === "string" ? sp.service : undefined}
+      initialAdd={sp.add === "1"}
     />
   );
 }

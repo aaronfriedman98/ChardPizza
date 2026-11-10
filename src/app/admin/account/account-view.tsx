@@ -7,11 +7,10 @@ import type { AccountTransaction, AdminUser, Service } from "@/lib/types";
 import { formatCents } from "@/lib/format";
 import { fmtDateOnly } from "@/lib/time";
 import { Modal } from "@/components/ui/modal";
-import { addTransaction, deleteTransaction, recordTransfer, setBalance } from "./actions";
+import { addTransaction, deleteTransaction, setBalance } from "./actions";
 
 type Partner = Pick<AdminUser, "id" | "display_name" | "is_partner">;
 type Svc = Pick<Service, "id" | "name" | "service_date" | "status">;
-export type OwedExpense = { id: string; expense_date: string; vendor: string | null; description: string | null; amount_cents: number; service_id: string | null };
 
 const KIND_LABEL: Record<AccountTransaction["kind"], string> = {
   opening_balance: "Opening balance",
@@ -27,19 +26,15 @@ export function AccountView({
   transactions,
   partners,
   services,
-  collected = {},
-  owed = [],
-  unpaid = {},
+  settleNet = 0,
+  settleOpen = false,
 }: {
   transactions: AccountTransaction[];
   partners: Partner[];
   services: Svc[];
-  /** Zelle and cash taken in per sale (all of it lands in your personal account). */
-  collected?: Record<string, { zelle: number; cash: number; card: number; stripeFee: number; feeEstimated: boolean }>;
-  /** Expenses you paid out of pocket that nobody has paid you back for. */
-  owed?: OwedExpense[];
-  /** Zelle/cash orders not paid yet, per sale. Not counted until they are marked paid. */
-  unpaid?: Record<string, { name: string; cents: number }[]>;
+  /** + you owe Char'd, − Char'd owes you (see Settle up). */
+  settleNet?: number;
+  settleOpen?: boolean;
 }) {
   const [modal, setModal] = useState<"deposit" | "partner_draw" | "other" | "set" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -52,35 +47,6 @@ export function AccountView({
   const monthIn = transactions.filter((t) => t.txn_date.startsWith(thisMonth) && t.amount_cents > 0 && t.kind !== "opening_balance").reduce((a, t) => a + t.amount_cents, 0);
   const monthOut = transactions.filter((t) => t.txn_date.startsWith(thisMonth) && t.amount_cents < 0).reduce((a, t) => a - t.amount_cents, 0);
   const draws = partners.filter((p) => p.is_partner).map((p) => ({ p, total: transactions.filter((t) => t.kind === "partner_draw" && t.partner_id === p.id).reduce((a, t) => a - t.amount_cents, 0) }));
-
-  // Per sale: Zelle + cash you took in, minus what you already moved into the Char'd account for that sale.
-  const toMove = services
-    .map((s) => {
-      const c = collected[s.id] ?? { zelle: 0, cash: 0, card: 0, stripeFee: 0, feeEstimated: false };
-      const moved = transactions.filter((t) => t.kind === "deposit" && t.service_id === s.id).reduce((a, t) => a + t.amount_cents, 0);
-      const netCard = c.card - c.stripeFee;
-      return { s, zelle: c.zelle, cash: c.cash, card: c.card, fee: c.stripeFee, feeEstimated: c.feeEstimated, moved, due: c.zelle + c.cash + netCard - moved };
-    })
-    .filter((r) => r.due !== 0 && r.zelle + r.cash + r.card > 0);
-  const dueTotal = toMove.reduce((a, r) => a + Math.max(r.due, 0), 0);
-
-  // Keep what you're owed: instead of moving everything and paying yourself back, move the difference.
-  const [keep, setKeep] = useState(true);
-  const [skipped, setSkipped] = useState<Set<string>>(() => new Set());
-  const keptList = keep ? owed.filter((e) => !skipped.has(e.id)) : [];
-  const kept = keptList.reduce((a, e) => a + e.amount_cents, 0);
-  const transfer = dueTotal - kept;
-
-  function moveIt() {
-    const what = kept
-      ? `Record ${formatCents(dueTotal)} of sales money as deposited, mark ${keptList.length} expense${keptList.length === 1 ? "" : "s"} (${formatCents(kept)}) as paid back to you, and treat ${formatCents(transfer)} as transferred?`
-      : `Record ${formatCents(transfer)} moved into the Char'd account?`;
-    if (!confirm(what)) return;
-    startTransition(async () => {
-      const res = await recordTransfer({ expense_ids: keptList.map((e) => e.id) });
-      if (res.error) setMessage(res.error);
-    });
-  }
 
   // Running balance, oldest first, then shown newest first.
   const withRunning = useMemo(() => {
@@ -118,97 +84,16 @@ export function AccountView({
         <Tile label="Out this month" value={formatCents(monthOut)} tone="amber" />
       </div>
 
-      {toMove.length > 0 && (
-        <div className="card space-y-3 border-2 border-green-300">
+      {settleOpen && (
+        <Link href="/admin/settle" className={`card flex items-center justify-between gap-3 border-2 hover:bg-cream ${settleNet > 0 ? "border-green-300" : settleNet < 0 ? "border-amber-300" : "border-line"}`}>
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Transfer to the Char&rsquo;d account</div>
-            <div className={`text-4xl font-bold tabular-nums ${transfer < 0 ? "text-red-700" : "text-green-700"}`}>{formatCents(Math.max(transfer, 0))}</div>
-            <div className="text-xs text-ink/60">
-              {formatCents(dueTotal)} that reached your account{kept ? ` − ${formatCents(kept)} you're keeping for expenses you paid` : ""}. Card money counts after Stripe&rsquo;s fee; Stripe pays it out to you a couple of days after the sale.
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">Settle up</div>
+            <div className="font-semibold">
+              {settleNet > 0 ? `You owe Char’d ${formatCents(settleNet)}` : settleNet < 0 ? `Char’d owes you ${formatCents(-settleNet)}` : "You’re even, tap to square up"}
             </div>
           </div>
-          <ul className="divide-y divide-line">
-            {toMove.map((r) => (
-              <li key={r.s.id} className="flex flex-wrap items-center gap-2 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold">
-                    {r.s.name} · {fmtDateOnly(r.s.service_date, "MMM d")}
-                  </div>
-                  <div className="text-xs text-ink/60">
-                    {formatCents(r.zelle)} Zelle + {formatCents(r.cash)} cash{r.card ? ` + ${formatCents(r.card)} card − ${formatCents(r.fee)} Stripe fee${r.feeEstimated ? " (est.)" : ""}` : ""}{r.moved ? ` − ${formatCents(r.moved)} already moved` : ""}
-                  </div>
-                  {(unpaid[r.s.id] ?? []).length > 0 && (
-                    <div className="mt-0.5 text-xs text-amber-800">
-                      Not counted until paid: {(unpaid[r.s.id] ?? []).map((u) => `${u.name} ${formatCents(u.cents)}`).join(", ")}
-                    </div>
-                  )}
-                </div>
-                {r.due > 0 ? <div className="text-lg font-bold tabular-nums">{formatCents(r.due)}</div> : <div className="text-sm text-amber-800">Moved {formatCents(-r.due)} more than you took in</div>}
-              </li>
-            ))}
-          </ul>
-
-          {owed.length > 0 && (
-            <div className="rounded-xl bg-cream p-3">
-              <label className="flex cursor-pointer items-center justify-between gap-3">
-                <div>
-                  <div className="font-semibold">Keep what you&rsquo;re owed</div>
-                  <div className="text-xs text-ink/60">You paid these out of pocket. Keep the money instead of moving it over and paying yourself back later.</div>
-                </div>
-                <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} className="h-5 w-5 accent-green-700" />
-              </label>
-              {keep && (
-                <ul className="mt-2 divide-y divide-line/70">
-                  {owed.map((e) => {
-                    const on = !skipped.has(e.id);
-                    return (
-                      <li key={e.id} className={`flex items-center gap-3 py-1.5 text-sm ${on ? "" : "opacity-50"}`}>
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={(ev) =>
-                            setSkipped((s) => {
-                              const n = new Set(s);
-                              if (ev.target.checked) n.delete(e.id);
-                              else n.add(e.id);
-                              return n;
-                            })
-                          }
-                          className="h-4 w-4 accent-green-700"
-                        />
-                        <div className="min-w-0 flex-1 truncate">
-                          {fmtDateOnly(e.expense_date, "MMM d")} · {[e.vendor, e.description].filter(Boolean).join(" · ") || "Expense"}
-                          {e.service_id && svcName.get(e.service_id) ? <span className="text-ink/50"> · {svcName.get(e.service_id)}</span> : null}
-                        </div>
-                        <div className="tabular-nums">{formatCents(e.amount_cents)}</div>
-                      </li>
-                    );
-                  })}
-                  <li className="flex justify-between pt-2 text-sm font-semibold">
-                    <span>Keeping</span>
-                    <span className="tabular-nums">{formatCents(kept)}</span>
-                  </li>
-                </ul>
-              )}
-            </div>
-          )}
-
-          {transfer < 0 && <p className="text-sm font-semibold text-red-700">You picked more to keep than you took in. Uncheck some expenses.</p>}
-          <button disabled={pending || transfer < 0 || dueTotal <= 0} onClick={moveIt} className="w-full rounded-xl bg-green-700 px-4 py-3 text-base font-bold text-white hover:bg-green-800 disabled:opacity-60 sm:w-auto">
-            ✓ I transferred {formatCents(Math.max(transfer, 0))}
-          </button>
-          <p className="text-xs text-ink/60">This records the deposit{kept ? " and marks those expenses paid back" : ""}, so the balance above matches the bank.</p>
-        </div>
-      )}
-
-      {toMove.length === 0 && Object.keys(unpaid).length > 0 && (
-        <div className="card text-sm">
-          <span className="font-semibold">Nothing to transfer right now.</span> Still unpaid:{" "}
-          {Object.entries(unpaid)
-            .flatMap(([, list]) => list.map((u) => `${u.name} ${formatCents(u.cents)}`))
-            .join(", ")}
-          . Once you mark them paid, the amount to move shows up here.
-        </div>
+          <span className="text-ember">→</span>
+        </Link>
       )}
 
       {draws.some((d) => d.total > 0) && (

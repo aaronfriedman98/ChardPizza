@@ -49,6 +49,11 @@ export function ServiceHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {s.status !== "draft" && (
+            <Link href={`/admin/services/${s.id}/summary`} className="btn-ghost border border-line text-sm">
+              Summary
+            </Link>
+          )}
           {isPublic && (
             <Link href={`/admin/services/${s.id}/share`} className="btn-ghost border border-line text-sm">
               Share
