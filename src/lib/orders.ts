@@ -189,6 +189,26 @@ export function pieCounts(orders: Order[]) {
   return { toMake, inOven, done, onHold };
 }
 
+/** Another order's pies already in the oven that this order could take (someone came early). */
+export type OvenDonor = { order: Order; moves: { name: string; qty: number }[]; total: number };
+
+export function ovenDonors(o: Order, orders: Order[]): OvenDonor[] {
+  if (!baking(o)) return [];
+  const need = new Map<string, number>();
+  for (const l of pieLines(o)) if (l.qty > l.inOven) need.set(l.name, l.qty - l.inOven);
+  if (!need.size) return [];
+  const out: OvenDonor[] = [];
+  for (const d of orders) {
+    if (d.id === o.id || !baking(d)) continue;
+    const moves = pieLines(d)
+      .map((l) => ({ name: l.name, qty: Math.min(need.get(l.name) ?? 0, l.inOven) }))
+      .filter((m) => m.qty > 0);
+    if (moves.length) out.push({ order: d, moves, total: moves.reduce((a, m) => a + m.qty, 0) });
+  }
+  // Suggest the order due last first: that customer can wait the longest for a fresh pie.
+  return out.sort((a, b) => b.order.scheduled_at.localeCompare(a.order.scheduled_at) || b.total - a.total);
+}
+
 export function itemSummary(o: Order) {
   return o.order_items.map((it) => `${it.quantity}× ${it.item_name}`).join(", ");
 }

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { Settings } from "@/lib/types";
-import { type Order, type PieLine, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgency, firstName, pieLines } from "@/lib/orders";
+import { type Order, type OvenDonor, type PieLine, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgency, firstName, pieLines } from "@/lib/orders";
 import { formatCents, formatPhone } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
-import { markPaid, markUnpaid, movePriority, ovenStep, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
+import { markPaid, markUnpaid, movePriority, ovenStep, setFlag, setOrderStatus, takeOvenPies } from "@/app/admin/orders/actions";
 import { ConfirmText, PriceText, QuickSend } from "@/components/admin/quick-send";
 import { ChangePies } from "@/components/admin/change-pies";
 import { Spinner, beginBusy, endBusy, toast } from "@/components/admin/feedback";
@@ -20,6 +20,7 @@ export function OrderCard({
   thresholds,
   mode = "board",
   onError,
+  donors = [],
 }: {
   order: Order;
   now: Date;
@@ -27,6 +28,8 @@ export function OrderCard({
   thresholds: Thresholds;
   mode?: "board" | "handoff" | "delivery";
   onError?: (m: string) => void;
+  /** Other orders with matching pies in the oven, for when this customer comes early. */
+  donors?: OvenDonor[];
 }) {
   const [confirmPickup, setConfirmPickup] = useState(false);
   const [showAddress, setShowAddress] = useState(false);
@@ -192,6 +195,7 @@ export function OrderCard({
           {(o.status === "making" || o.status === "confirmed") && (
             <CardButton {...B} primary onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Ready</CardButton>
           )}
+          <UseOvenPies order={o} donors={donors} tz={tz} />
           {o.status === "ready" && o.fulfillment === "pickup" && (
             <CardButton {...B} primary onClick={complete}>
               Picked up
@@ -331,6 +335,76 @@ function CardButton({
       <span className="busy-label">{children}</span>
       {mine && <Spinner className="busy-spinner" />}
     </button>
+  );
+}
+
+/**
+ * Someone came early: take pies already in the oven for another order. The button only shows
+ * when another order has a matching pie in. The picker suggests the order due last.
+ */
+export function UseOvenPies({ order, donors, tz, big = false }: { order: Order; donors: OvenDonor[]; tz: string; big?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  if (!donors.length) return null;
+
+  function take(fromId: string) {
+    if (busyId) return;
+    setBusyId(fromId);
+    beginBusy();
+    void (async () => {
+      try {
+        const r = await takeOvenPies(order.id, fromId);
+        if (r.error) toast(r.error, "error");
+        else {
+          toast(r.ok || "Moved.");
+          setOpen(false);
+        }
+      } catch {
+        toast("That didn't go through. Try again.", "error");
+      } finally {
+        endBusy();
+        setBusyId(null);
+      }
+    })();
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`rounded-lg border-2 border-amber-400 font-semibold text-amber-900 hover:bg-amber-50 ${big ? "flex-1 rounded-xl py-3 text-lg" : "px-3 py-1.5 text-sm"} ${open ? "bg-amber-50" : "bg-white"}`}
+      >
+        🔥 Use oven pies
+      </button>
+      {open && (
+        <div className="w-full basis-full space-y-1.5 rounded-xl border border-amber-300 bg-amber-50 p-2 text-sm">
+          <div className="font-semibold text-amber-900">Hand {firstName(order)} pies that are in the oven for:</div>
+          {donors.map((d, i) => (
+            <button
+              key={d.order.id}
+              type="button"
+              disabled={!!busyId}
+              onClick={() => take(d.order.id)}
+              className="flex w-full items-center gap-2 rounded-lg bg-white px-3 py-2 text-left hover:bg-amber-100 disabled:opacity-60"
+            >
+              <span className="min-w-0 flex-1">
+                <b>{d.order.customer_name}</b> <span className="text-ink/50">· {fmtTime(d.order.scheduled_at, tz)}</span>
+                <span className="block text-xs text-ink/70">Take {d.moves.map((m) => `${m.qty} ${m.name}`).join(" + ")}</span>
+              </span>
+              {i === 0 && donors.length > 1 && <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-900">Due last</span>}
+              {busyId === d.order.id && <Spinner className="h-4 w-4" />}
+            </button>
+          ))}
+          <div className="flex items-center justify-between gap-2 text-xs text-ink/60">
+            <span>Their pies go back on the oven list.</span>
+            <button type="button" className="underline" onClick={() => setOpen(false)}>
+              Never mind
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

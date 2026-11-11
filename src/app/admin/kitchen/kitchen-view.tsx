@@ -3,13 +3,13 @@
 import { useBusyTransition } from "@/components/admin/feedback";
 import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, ServiceWaste, Settings } from "@/lib/types";
-import { type Order, queueSort, minutesBehind, firstName, pieLines, pieCounts } from "@/lib/orders";
+import { type Order, queueSort, minutesBehind, firstName, pieLines, pieCounts, ovenDonors } from "@/lib/orders";
 import { fmtTime } from "@/lib/time";
 import { LiveRefresh } from "@/components/admin/live-refresh";
 import { CallSheet } from "@/components/admin/call-sheet";
 import { Modal } from "@/components/ui/modal";
 import { ovenStep, setOrderStatus } from "@/app/admin/orders/actions";
-import { OvenTag } from "@/components/admin/order-card";
+import { OvenTag, UseOvenPies } from "@/components/admin/order-card";
 import { deleteWaste, logWaste } from "@/app/admin/orders/waste-actions";
 
 type PieType = { menu_item_id: string; name: string };
@@ -127,7 +127,7 @@ export function KitchenView({
                   })}
                 </ul>
                 {o.special_instructions && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">“{o.special_instructions}”</p>}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {pieLines(o).some((l) => l.inOven < l.qty) && (
                     <button disabled={pending} onClick={() => run(() => ovenStep(o.id, "all"))} className="flex-1 rounded-xl bg-amber-400 py-3 text-lg font-bold text-coal hover:bg-amber-500 disabled:opacity-50">
                       🔥 {pieLines(o).some((l) => l.inOven > 0) ? "Rest in oven" : "All in oven"}
@@ -136,6 +136,7 @@ export function KitchenView({
                   <button disabled={pending} onClick={() => run(() => setOrderStatus(o.id, "ready"))} className="flex-1 rounded-xl bg-green-600 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
                     Ready
                   </button>
+                  {o.customer_arrived && <UseOvenPies order={o} donors={ovenDonors(o, orders)} tz={tz} big />}
                 </div>
               </article>
             );

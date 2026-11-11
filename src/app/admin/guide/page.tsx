@@ -156,6 +156,7 @@ export default function GuidePage() {
           rows={[
             ["Tap a pie line", "One of those pies just went in the oven. The line shows 🔥 1/2, then 🔥 in oven. The first pie in turns the order to Making."],
             ["🔥 All in oven", "Every pie on the order is in. Rest in oven if some already were."],
+            ["🔥 Use oven pies", "This customer came early and pies for someone else are already in the oven. Tap it, pick whose pies to take (the order due last is suggested), and they move over. That customer's pies go back on the oven list, at the top if their time is earlier. Pies already boxed for someone else? Not ready on that order, Ready on this one."],
             ["Undo oven", "Takes the order's pies off the oven count, back to Scheduled."],
             ["Ready", "The pies are boxed. Order turns green, moves to the top of Handoff, and the Kitchen stops showing it. Does not message the customer."],
             ["Picked up", "The customer has the box. Order is done. If it is not marked paid yet you get a quick choice: Mark paid & hand off, or Hand off anyway."],
@@ -236,6 +237,7 @@ export default function GuidePage() {
             ["Customer wants to cancel", "Cancel on their card with a reason. For a card payment, refund in the Stripe dashboard, then the Board shows it unpaid."],
             ["Walk-up, family, or a special request", "+ manual order at the top of the Board. Same menu and times. Flip the Override capacity switch if the slot is full or you are past the dough count."],
             ["Oven is behind", "Tap PAUSE NEW ORDERS so no more come in. Send Running behind to the next few customers. Resume when caught up."],
+            ["Someone comes early and their pies are not made", "Tap 🔥 Use oven pies on their card (Board or Handoff; on the Kitchen screen it shows once they are marked Here). Hand them pies that are in the oven for another customer; the system puts the other order back on the oven list so Pies left stays right."],
             ["Ahead of schedule", "Make the next order on the oven list early, then Message them Ready in ~5 minutes. Or Make now on whichever order you want to pull forward."],
             ["Customer texts to add (or drop) a pie", "± Pies on their card, tap + or −, Save. It stays one order. If they already paid, the toast tells you what they still owe, and the card flips back to unpaid until you collect it."],
             ["Paid cash", "Mark paid on the card, or do it in one tap with Mark paid & hand off when you give the box."],

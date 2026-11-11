@@ -27,6 +27,7 @@ export default async function HandoffPage({ searchParams }: PageProps<"/admin/ha
       service={service}
       settings={settings}
       orders={orders.filter((o) => o.fulfillment === "pickup")}
+      allOrders={orders}
       mode="handoff"
       sections={[
         { key: "ready", label: "Ready to hand out", match: (o) => o.status === "ready" },

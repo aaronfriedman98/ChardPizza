@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, Settings } from "@/lib/types";
-import { type Order, ACTIVE, minutesBehind, minutesReady, urgency, queueSort, pieCounts } from "@/lib/orders";
+import { type Order, ACTIVE, minutesBehind, minutesReady, urgency, queueSort, pieCounts, ovenDonors } from "@/lib/orders";
 import { formatCents } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { OrderCard } from "@/components/admin/order-card";
@@ -244,7 +244,7 @@ export function ServiceBoard({
           </h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {list.map((o) => (
-              <OrderCard key={o.id} order={o} now={now} tz={tz} thresholds={settings} onError={setError} />
+              <OrderCard key={o.id} order={o} now={now} tz={tz} thresholds={settings} onError={setError} donors={ovenDonors(o, orders)} />
             ))}
           </div>
         </section>

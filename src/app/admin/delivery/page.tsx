@@ -32,6 +32,7 @@ export default async function DeliveryPage({ searchParams }: PageProps<"/admin/d
       service={service}
       settings={settings}
       orders={orders.filter((o) => o.fulfillment === "delivery")}
+      allOrders={orders}
       mode="delivery"
       sections={[
         { key: "out", label: "Out for delivery", match: (o) => o.status === "out_for_delivery" },

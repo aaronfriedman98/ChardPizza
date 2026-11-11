@@ -91,6 +91,67 @@ export async function ovenStep(orderId: string, step: string): Promise<Result> {
   return { ok: "" };
 }
 
+/**
+ * Someone came early: hand them pies that are in the oven for another order.
+ * Moves as many matching pies as `toId` still needs; `fromId` gets them back on the oven list.
+ */
+export async function takeOvenPies(toId: string, fromId: string): Promise<Result> {
+  const { supabase, admin } = await requireAdmin();
+  if (toId === fromId) return { error: "Pick a different order." };
+  const { data: rows, error: readErr } = await supabase
+    .from("orders")
+    .select("id, order_number, customer_name, status, oven, order_items(item_name, quantity, capacity_units_each)")
+    .in("id", [toId, fromId]);
+  if (readErr) return { error: readErr.message };
+  type Row = { id: string; order_number: string; customer_name: string; status: string; oven: Record<string, number> | null; order_items: { item_name: string; quantity: number; capacity_units_each: number }[] };
+  const to = (rows as Row[] | null)?.find((r) => r.id === toId);
+  const from = (rows as Row[] | null)?.find((r) => r.id === fromId);
+  if (!to || !from) return { error: "Order not found." };
+  const baking = (s: string) => s === "confirmed" || s === "making";
+  if (!baking(to.status)) return { error: "This order is already past the oven." };
+  if (!baking(from.status)) return { error: `${from.customer_name}'s order is already past the oven. Refresh and try again.` };
+
+  // Pie totals and how many are really in, per pie name, for both orders.
+  const toTotals = new Map<string, number>();
+  for (const it of to.order_items) if (Number(it.capacity_units_each) > 0) toTotals.set(it.item_name, (toTotals.get(it.item_name) ?? 0) + it.quantity);
+  const fromTotals = new Map<string, number>();
+  for (const it of from.order_items) if (Number(it.capacity_units_each) > 0) fromTotals.set(it.item_name, (fromTotals.get(it.item_name) ?? 0) + it.quantity);
+  const toOven = { ...(to.oven ?? {}) };
+  const fromOven = { ...(from.oven ?? {}) };
+
+  const moved: { name: string; qty: number }[] = [];
+  for (const [name, total] of toTotals) {
+    const need = total - Math.min(toOven[name] ?? 0, total);
+    const have = Math.min(fromOven[name] ?? 0, fromTotals.get(name) ?? 0);
+    const n = Math.min(need, have);
+    if (n <= 0) continue;
+    toOven[name] = (toOven[name] ?? 0) + n;
+    fromOven[name] = have - n;
+    if (fromOven[name] === 0) delete fromOven[name];
+    moved.push({ name, qty: n });
+  }
+  if (!moved.length) return { error: "Those pies aren't in the oven anymore. Refresh and try again." };
+
+  const fromStill = Object.values(fromOven).some((n) => n > 0);
+  const { error: e1 } = await supabase
+    .from("orders")
+    .update({ oven: fromOven, ...(!fromStill && from.status === "making" ? { status: "confirmed" } : {}) })
+    .eq("id", fromId);
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase
+    .from("orders")
+    .update({ oven: toOven, ...(to.status === "confirmed" ? { status: "making" } : {}) })
+    .eq("id", toId);
+  if (e2) return { error: e2.message };
+
+  const detail = { moved, from: from.order_number, to: to.order_number };
+  await audit(supabase, admin.id, "order.oven_taken", "order", toId, detail);
+  await audit(supabase, admin.id, "order.oven_given", "order", fromId, detail);
+  touch();
+  const n = moved.reduce((a, m) => a + m.qty, 0);
+  return { ok: `Moved ${n} ${n === 1 ? "pie" : "pies"}. ${from.customer_name.split(/\s+/)[0]}'s ${n === 1 ? "is" : "are"} back on the oven list.` };
+}
+
 export async function markPaid(orderId: string, method?: PaymentMethod, note?: string): Promise<Result> {
   const { supabase, admin } = await requireAdmin();
   const o = await getOrder(supabase, orderId);
