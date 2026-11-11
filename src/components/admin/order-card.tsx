@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { Settings } from "@/lib/types";
-import { type Order, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgency, firstName } from "@/lib/orders";
+import { type Order, type PieLine, STATUS_LABEL, PAY_LABEL, minutesBehind, minutesReady, urgency, firstName, pieLines } from "@/lib/orders";
 import { formatCents, formatPhone } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
-import { markPaid, markUnpaid, movePriority, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
+import { markPaid, markUnpaid, movePriority, ovenStep, setFlag, setOrderStatus } from "@/app/admin/orders/actions";
 import { ConfirmText, PriceText, QuickSend } from "@/components/admin/quick-send";
 import { ChangePies } from "@/components/admin/change-pies";
 import { Spinner, beginBusy, endBusy, toast } from "@/components/admin/feedback";
@@ -39,6 +39,11 @@ export function OrderCard({
   const ready = minutesReady(o, now);
   const paid = o.payment_status === "paid";
   const done = o.status === "completed" || o.status === "cancelled";
+  const baking = o.status === "confirmed" || o.status === "making";
+  const pies = pieLines(o);
+  const pieTotal = pies.reduce((a, l) => a + l.qty, 0);
+  const ovenCount = pies.reduce((a, l) => a + l.inOven, 0);
+  const left = pieTotal - ovenCount;
 
   function run(fn: () => Promise<{ error?: string }>) {
     const key = armed.current ?? "action";
@@ -107,7 +112,11 @@ export function OrderCard({
             <Badge tone={paid ? "green" : "amber"}>
               {paid ? "PAID" : PAY_LABEL[o.payment_status]} · {o.payment_method}
             </Badge>
-            <Badge tone={o.status === "ready" ? "green" : o.status === "making" ? "ember" : "gray"}>{STATUS_LABEL[o.status]}</Badge>
+            {baking && ovenCount > 0 ? (
+              <Badge tone="ember">{left === 0 ? "🔥 All in oven" : `🔥 ${ovenCount} of ${pieTotal} in oven`}</Badge>
+            ) : (
+              <Badge tone={o.status === "ready" ? "green" : o.status === "making" ? "ember" : "gray"}>{STATUS_LABEL[o.status]}</Badge>
+            )}
             {(o.price_tier_id || o.pie_price_override_cents != null) && <Badge tone="blue">SPECIAL PRICE</Badge>}
             {o.is_rush && <Badge tone="red">MAKE NOW</Badge>}
             {o.is_on_hold && <Badge tone="gray">ON HOLD</Badge>}
@@ -121,14 +130,41 @@ export function OrderCard({
         </div>
       </div>
 
-      {/* items */}
+      {/* items: while baking, tap a pie line each time one of those pies goes in the oven */}
       <ul className="mt-2 space-y-0.5">
-        {o.order_items.map((it) => (
-          <li key={it.id} className="flex gap-2 text-[15px]">
-            <span className="w-7 shrink-0 text-right font-bold text-ember">{it.quantity}×</span>
-            <span>{it.item_name}</span>
-          </li>
-        ))}
+        {o.order_items.map((it) => {
+          const pie = baking ? pies.find((l) => l.name === it.item_name) : undefined;
+          if (!pie || mode !== "board") {
+            return (
+              <li key={it.id} className="flex gap-2 text-[15px]">
+                <span className="w-7 shrink-0 text-right font-bold text-ember">{it.quantity}×</span>
+                <span>{it.item_name}</span>
+                {pie && pie.inOven > 0 && <OvenTag line={pie} />}
+              </li>
+            );
+          }
+          const full = pie.inOven >= pie.qty;
+          const key = `oven:${pie.name}`;
+          return (
+            <li key={it.id}>
+              <button
+                type="button"
+                disabled={full || busy.has(key)}
+                onClick={() => {
+                  armed.current = key;
+                  run(() => ovenStep(o.id, pie.name));
+                }}
+                className={`-mx-1.5 flex w-[calc(100%+0.75rem)] items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-[15px] transition ${full ? "" : "hover:bg-amber-50 active:bg-amber-100"}`}
+                title={full ? "All in the oven" : "Tap when one goes in the oven"}
+              >
+                <span className="w-7 shrink-0 text-right font-bold text-ember">{it.quantity}×</span>
+                <span className={full ? "text-ink/50 line-through decoration-ember/50" : ""}>{it.item_name}</span>
+                <OvenTag line={pie} />
+                {busy.has(key) && <Spinner className="h-3.5 w-3.5" />}
+              </button>
+            </li>
+          );
+        })}
       </ul>
       {o.special_instructions && <p className="mt-1.5 rounded-lg bg-amber-50 px-2 py-1 text-sm text-amber-900">“{o.special_instructions}”</p>}
       {(mode === "delivery" || showAddress) && o.fulfillment === "delivery" && o.address_line1 && (
@@ -148,6 +184,11 @@ export function OrderCard({
       {/* actions */}
       {!done && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {baking && mode === "board" && left > 0 && (
+            <CardButton {...B} oven onClick={() => run(() => ovenStep(o.id, "all"))}>
+              {ovenCount > 0 ? "🔥 Rest in oven" : "🔥 All in oven"}
+            </CardButton>
+          )}
           {(o.status === "making" || o.status === "confirmed") && (
             <CardButton {...B} primary onClick={() => run(() => setOrderStatus(o.id, "ready"))}>Ready</CardButton>
           )}
@@ -200,6 +241,9 @@ export function OrderCard({
                     </button>
                   </span>
                 </>
+              )}
+              {baking && ovenCount > 0 && (
+                <CardButton {...B} onClick={() => confirm("Take this order's pies off the oven count?") && run(() => ovenStep(o.id, "clear"))}>Undo oven</CardButton>
               )}
               {o.status === "ready" && <CardButton {...B} onClick={() => run(() => setOrderStatus(o.id, "confirmed"))}>Not ready</CardButton>}
               <CardButton {...B}
@@ -257,6 +301,7 @@ function CardButton({
   onClick,
   primary,
   danger,
+  oven,
   busyKeys,
   arm,
 }: {
@@ -264,6 +309,7 @@ function CardButton({
   onClick: () => void;
   primary?: boolean;
   danger?: boolean;
+  oven?: boolean;
   busyKeys: Set<string>;
   arm: (k: string) => void;
 }) {
@@ -279,12 +325,22 @@ function CardButton({
         onClick();
       }}
       className={`busy-btn rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60 ${
-        primary ? "bg-ember text-white hover:bg-ember/90" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
+        primary ? "bg-ember text-white hover:bg-ember/90" : oven ? "bg-amber-400 text-coal hover:bg-amber-500" : danger ? "text-red-700 hover:bg-red-50" : "bg-cream text-ink hover:bg-line"
       }`}
     >
       <span className="busy-label">{children}</span>
       {mine && <Spinner className="busy-spinner" />}
     </button>
+  );
+}
+
+/** "🔥 1/2" while some are in, "🔥 in" once they all are. */
+export function OvenTag({ line }: { line: PieLine }) {
+  if (line.inOven === 0) return <span className="ml-auto text-xs text-ink/35">tap when in oven</span>;
+  return (
+    <span className="ml-auto whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+      🔥 {line.inOven >= line.qty ? "in oven" : `${line.inOven}/${line.qty}`}
+    </span>
   );
 }
 

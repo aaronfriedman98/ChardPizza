@@ -51,6 +51,46 @@ export async function setOrderStatus(orderId: string, next: OrderStatus, note?: 
   return { ok: "" };
 }
 
+/**
+ * Oven taps. `step` is a pie name (one more of that pie went in), "all" (every pie is in),
+ * or "clear" (undo). The first pie in moves the order to Making; clearing moves it back.
+ */
+export async function ovenStep(orderId: string, step: string): Promise<Result> {
+  const { supabase, admin } = await requireAdmin();
+  const { data: o, error: readErr } = await supabase
+    .from("orders")
+    .select("id, order_number, status, oven, order_items(item_name, quantity, capacity_units_each)")
+    .eq("id", orderId)
+    .single();
+  if (readErr || !o) return { error: readErr?.message.includes("oven") ? "The oven column isn't in the database yet. Run the SQL first." : "Order not found." };
+  if (o.status !== "confirmed" && o.status !== "making") return { error: "This order is already past the oven." };
+
+  const totals = new Map<string, number>();
+  for (const it of o.order_items as { item_name: string; quantity: number; capacity_units_each: number }[])
+    if (Number(it.capacity_units_each) > 0) totals.set(it.item_name, (totals.get(it.item_name) ?? 0) + it.quantity);
+
+  const cur = (o.oven ?? {}) as Record<string, number>;
+  let oven: Record<string, number>;
+  if (step === "all") oven = Object.fromEntries(totals);
+  else if (step === "clear") oven = {};
+  else {
+    const total = totals.get(step);
+    if (!total) return { error: "That pie isn't on this order anymore." };
+    oven = { ...cur, [step]: Math.min((cur[step] ?? 0) + 1, total) };
+  }
+
+  const anyIn = Object.values(oven).some((n) => n > 0);
+  const patch: Record<string, unknown> = { oven };
+  if (anyIn && o.status === "confirmed") patch.status = "making";
+  if (!anyIn && o.status === "making") patch.status = "confirmed";
+
+  const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
+  if (error) return { error: error.message };
+  await audit(supabase, admin.id, "order.oven", "order", orderId, { order_number: o.order_number, step, oven });
+  touch();
+  return { ok: "" };
+}
+
 export async function markPaid(orderId: string, method?: PaymentMethod, note?: string): Promise<Result> {
   const { supabase, admin } = await requireAdmin();
   const o = await getOrder(supabase, orderId);

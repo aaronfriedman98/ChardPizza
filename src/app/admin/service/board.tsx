@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, Settings } from "@/lib/types";
-import { type Order, ACTIVE, minutesBehind, minutesReady, urgency, queueSort } from "@/lib/orders";
+import { type Order, ACTIVE, minutesBehind, minutesReady, urgency, queueSort, pieCounts } from "@/lib/orders";
 import { formatCents } from "@/lib/format";
 import { fmtTime } from "@/lib/time";
 import { OrderCard } from "@/components/admin/order-card";
@@ -61,6 +61,7 @@ export function ServiceBoard({
   const profit = sales - expenseCents;
   const nextUp = active.filter((o) => o.status === "confirmed" || o.status === "making").sort(queueSort)[0];
   const paused = s.ordering_override === "paused";
+  const pies = pieCounts(orders);
 
   // ---- filtering ----------------------------------------------------------
   const shown = useMemo(() => {
@@ -174,7 +175,17 @@ export function ServiceBoard({
 
       {/* metrics */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        <Stat label="Dough used" value={`${Number(availability.units_sold) + Number(availability.units_wasted)} / ${s.pizza_capacity_total}`} sub={`${Number(availability.units_remaining)} left${Number(availability.units_wasted) ? ` · ${Number(availability.units_wasted)} lost` : ""}`} />
+        {/* What the chefs ask all night. Pies in the oven count as done. */}
+        <div className="card col-span-2 border-2 border-amber-300 bg-amber-50 p-3 sm:col-span-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">Pies left to make</div>
+          <div className="font-display text-4xl font-black leading-none tabular-nums text-coal">{pies.toMake}</div>
+          <div className="mt-1 text-xs text-ink/70">
+            🔥 {pies.inOven} in oven · {pies.done} boxed{pies.onHold ? ` · ${pies.onHold} on hold` : ""}
+          </div>
+          <div className="text-xs text-ink/50">
+            Dough: {Number(availability.units_remaining)} unsold{Number(availability.units_wasted) ? ` · ${Number(availability.units_wasted)} lost` : ""}
+          </div>
+        </div>
         <Stat label="Orders" value={String(live.length)} sub={`${live.filter((o) => o.fulfillment === "pickup").length} pickup · ${live.filter((o) => o.fulfillment === "delivery").length} delivery`} />
         <Stat label="Revenue" value={formatCents(revenue)} sub={`${formatCents(paidTotal)} paid`} />
         <Stat label="Outstanding" value={formatCents(revenue - paidTotal)} sub={`${live.filter((o) => o.payment_status !== "paid").length} unpaid`} tone={revenue - paidTotal > 0 ? "amber" : "green"} />
@@ -243,6 +254,12 @@ export function ServiceBoard({
       <aside className="xl:sticky xl:top-4 xl:self-start">
         <CallSheet orders={orders} tz={tz} compact />
       </aside>
+      </div>
+
+      {/* Pies left stays on screen while scrolling the cards. */}
+      <div className="pointer-events-none fixed bottom-24 left-4 z-30 rounded-full bg-coal px-4 py-2 text-sm font-bold text-white shadow-lg md:bottom-6 md:left-auto md:right-60">
+        <span className="font-display text-lg tabular-nums text-amber">{pies.toMake}</span> pies left
+        {pies.inOven > 0 && <span className="ml-2 font-normal text-white/60">🔥 {pies.inOven}</span>}
       </div>
 
       {/* ready-too-long callout */}

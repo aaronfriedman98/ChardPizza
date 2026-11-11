@@ -56,6 +56,8 @@ export interface Order {
   cancel_reason: string | null;
   created_at: string;
   order_items: OrderItem[];
+  /** Pies in the oven so far, by pie name. Missing until the oven column exists. */
+  oven?: Record<string, number> | null;
   /** Present on ops screens: what has already gone out for this order. */
   notifications?: { channel: string; template_key: string | null; status: string }[];
   /** Joined tier name when special pricing is on the order. */
@@ -151,6 +153,40 @@ export function tallyItems(orders: Order[]): { name: string; qty: number }[] {
   const m = new Map<string, number>();
   for (const o of orders) for (const it of o.order_items) m.set(it.item_name, (m.get(it.item_name) ?? 0) + it.quantity);
   return Array.from(m, ([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+}
+
+// ---- oven tracking ----------------------------------------------------------
+// A pie counts as done the moment it goes in the oven. orders.oven holds how many of each
+// pie type are in, keyed by pie name, so changing an order's pies never loses the count.
+
+export type PieLine = { name: string; qty: number; inOven: number };
+
+/** Still being made: the oven taps matter. Ready and later: every pie is done. */
+const baking = (o: Order) => o.status === "confirmed" || o.status === "making";
+
+export function pieLines(o: Order): PieLine[] {
+  const m = new Map<string, number>();
+  for (const it of o.order_items) if (Number(it.capacity_units_each) > 0) m.set(it.item_name, (m.get(it.item_name) ?? 0) + it.quantity);
+  const oven = o.oven ?? {};
+  return Array.from(m, ([name, qty]) => ({ name, qty, inOven: baking(o) ? Math.min(Math.max(oven[name] ?? 0, 0), qty) : qty }));
+}
+
+/** How many of an order's pies are still waiting to go in the oven. */
+export const piesToMake = (o: Order) => (baking(o) ? pieLines(o).reduce((a, l) => a + l.qty - l.inOven, 0) : 0);
+
+export function pieCounts(orders: Order[]) {
+  let toMake = 0, inOven = 0, done = 0, onHold = 0;
+  for (const o of orders) {
+    if (o.status === "cancelled" || o.status === "pending_payment") continue;
+    for (const l of pieLines(o)) {
+      if (baking(o)) {
+        toMake += l.qty - l.inOven;
+        inOven += l.inOven;
+        if (o.is_on_hold) onHold += l.qty - l.inOven;
+      } else done += l.qty;
+    }
+  }
+  return { toMake, inOven, done, onHold };
 }
 
 export function itemSummary(o: Order) {

@@ -40,10 +40,13 @@ export default function GuidePage() {
         <p>
           Every order moves through the same four stops. You never type a status, you tap one big button and the order moves to the next stop on every screen and every phone at once.
         </p>
-        <Flow steps={["Scheduled", "Ready", "Picked up / Delivered"]} />
+        <Flow steps={["Scheduled", "In the oven", "Ready", "Picked up / Delivered"]} />
         <ul>
           <li>
             <b>Scheduled</b>: the order is in, the customer picked a time. The oven list tells you when to make it.
+          </li>
+          <li>
+            <b>In the oven</b>: tap a pie line on the card each time one of those pies goes in, or <Key>🔥 All in oven</Key> for the whole order. A pie in the oven counts as made, so it drops off the oven list and out of <b>Pies left</b>. Tapped by mistake? <Key>Undo oven</Key>.
           </li>
           <li>
             <b>Ready</b>: the pies are boxed with that customer&rsquo;s name on the box. Tap <Key>Ready</Key> the moment the box closes.
@@ -94,7 +97,7 @@ export default function GuidePage() {
         <h3>The six tiles</h3>
         <ul>
           <li>
-            <b>Dough used</b>: pies sold plus pies lost, out of the dough you said you have. &ldquo;Left&rdquo; is how many more pies you can sell.
+            <b>Pies left to make</b>: the answer when the chefs ask &ldquo;how many left?&rdquo; Every pie ordered tonight that has not gone in the oven yet. Pies in the oven and boxed orders count as done. The same number floats at the bottom of the screen while you scroll. Under it, <b>Dough unsold</b> is how many more pies the website can still sell.
           </li>
           <li>
             <b>Orders</b>: live orders, split pickup and delivery.
@@ -151,6 +154,9 @@ export default function GuidePage() {
       <Section id="card" title="4. Every button on an order card">
         <Table
           rows={[
+            ["Tap a pie line", "One of those pies just went in the oven. The line shows 🔥 1/2, then 🔥 in oven. The first pie in turns the order to Making."],
+            ["🔥 All in oven", "Every pie on the order is in. Rest in oven if some already were."],
+            ["Undo oven", "Takes the order's pies off the oven count, back to Scheduled."],
             ["Ready", "The pies are boxed. Order turns green, moves to the top of Handoff, and the Kitchen stops showing it. Does not message the customer."],
             ["Picked up", "The customer has the box. Order is done. If it is not marked paid yet you get a quick choice: Mark paid & hand off, or Hand off anyway."],
             ["Out for delivery", "Delivery orders only. The driver has it. Then Delivered when it arrives."],
@@ -200,7 +206,7 @@ export default function GuidePage() {
 
       <Section id="kitchen" title="6. Kitchen screen">
         <p>
-          Built for the person at the oven. It shows demand, not paperwork: the oven list on top says which pies to make in which order, and the <b>Box it</b> cards below show each order&rsquo;s pies in huge type with the customer&rsquo;s first name. When a box closes, tap the big green <Key tone="green">Ready</Key> on that card.
+          Built for the person at the oven. It shows demand, not paperwork: the oven list on top says which pies to make in which order, and the cards below show each order&rsquo;s pies in huge type with the customer&rsquo;s first name. Tap a pie when it goes in the oven (or <Key>🔥 All in oven</Key>), and the big <b>pies left</b> count at the top goes down. When a box closes, tap the big green <Key tone="green">Ready</Key> on that card.
         </p>
         <ul>
           <li>Cards are numbered in make order. Red border = Make now. Blue = the customer is here. Amber = late.</li>

@@ -3,12 +3,13 @@
 import { useBusyTransition } from "@/components/admin/feedback";
 import { useEffect, useMemo, useState } from "react";
 import type { Service, ServiceAvailability, ServiceWaste, Settings } from "@/lib/types";
-import { type Order, queueSort, minutesBehind, firstName } from "@/lib/orders";
+import { type Order, queueSort, minutesBehind, firstName, pieLines, pieCounts } from "@/lib/orders";
 import { fmtTime } from "@/lib/time";
 import { LiveRefresh } from "@/components/admin/live-refresh";
 import { CallSheet } from "@/components/admin/call-sheet";
 import { Modal } from "@/components/ui/modal";
-import { setOrderStatus } from "@/app/admin/orders/actions";
+import { ovenStep, setOrderStatus } from "@/app/admin/orders/actions";
+import { OvenTag } from "@/components/admin/order-card";
 import { deleteWaste, logWaste } from "@/app/admin/orders/waste-actions";
 
 type PieType = { menu_item_id: string; name: string };
@@ -55,6 +56,7 @@ export function KitchenView({
   const active = queue.filter((o) => !o.is_on_hold);
   const held = queue.filter((o) => o.is_on_hold);
   const readyCount = orders.filter((o) => o.status === "ready").length;
+  const pies = pieCounts(orders);
 
 
   function run(fn: () => Promise<{ error?: string }>) {
@@ -75,6 +77,10 @@ export function KitchenView({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-1.5 text-center">
+            <div className="font-display text-3xl font-black leading-none tabular-nums">{pies.toMake}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">pies left · 🔥 {pies.inOven}</div>
+          </div>
           <button onClick={() => setLostOpen(true)} className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
             Lost a pie
           </button>
@@ -87,7 +93,7 @@ export function KitchenView({
 
       {/* BOX IT */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/50">Box it · tap Ready when the pies are in the box</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/50">Tap a pie when it goes in the oven · Ready when it is boxed</h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {active.map((o, i) => {
             const behind = minutesBehind(o, now);
@@ -101,17 +107,36 @@ export function KitchenView({
                 </div>
                 <div className="text-lg font-semibold">{firstName(o)}</div>
                 <ul className="mt-1 space-y-0.5">
-                  {o.order_items.map((it) => (
-                    <li key={it.id} className="flex items-baseline gap-2">
-                      <span className="w-8 text-right font-display text-2xl font-black text-ember tabular-nums">{it.quantity}</span>
-                      <span className="text-xl font-bold">{it.item_name}</span>
-                    </li>
-                  ))}
+                  {o.order_items.map((it) => {
+                    const pie = pieLines(o).find((l) => l.name === it.item_name);
+                    const full = !!pie && pie.inOven >= pie.qty;
+                    return (
+                      <li key={it.id}>
+                        <button
+                          type="button"
+                          disabled={!pie || full || pending}
+                          onClick={() => pie && run(() => ovenStep(o.id, pie.name))}
+                          className={`flex w-full items-baseline gap-2 rounded-lg px-1 text-left ${pie && !full ? "hover:bg-amber-50 active:bg-amber-100" : ""}`}
+                        >
+                          <span className="w-8 text-right font-display text-2xl font-black text-ember tabular-nums">{it.quantity}</span>
+                          <span className={`text-xl font-bold ${full ? "text-ink/40 line-through decoration-ember/50" : ""}`}>{it.item_name}</span>
+                          {pie && <OvenTag line={pie} />}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
                 {o.special_instructions && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">“{o.special_instructions}”</p>}
-                <button disabled={pending} onClick={() => run(() => setOrderStatus(o.id, "ready"))} className="mt-3 w-full rounded-xl bg-green-600 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
-                  Ready
-                </button>
+                <div className="mt-3 flex gap-2">
+                  {pieLines(o).some((l) => l.inOven < l.qty) && (
+                    <button disabled={pending} onClick={() => run(() => ovenStep(o.id, "all"))} className="flex-1 rounded-xl bg-amber-400 py-3 text-lg font-bold text-coal hover:bg-amber-500 disabled:opacity-50">
+                      🔥 {pieLines(o).some((l) => l.inOven > 0) ? "Rest in oven" : "All in oven"}
+                    </button>
+                  )}
+                  <button disabled={pending} onClick={() => run(() => setOrderStatus(o.id, "ready"))} className="flex-1 rounded-xl bg-green-600 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                    Ready
+                  </button>
+                </div>
               </article>
             );
           })}

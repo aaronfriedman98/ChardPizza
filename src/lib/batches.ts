@@ -1,5 +1,5 @@
 import type { Order } from "@/lib/orders";
-import { queueSort } from "@/lib/orders";
+import { pieLines, queueSort } from "@/lib/orders";
 
 /** One step for the oven: make `qty` of `name`. */
 export type Run = {
@@ -15,10 +15,10 @@ export type Run = {
 type Line = { name: string; qty: number };
 
 function linesOf(o: Order): Line[] {
-  // Only pies count. Sides (capacity 0) are boxed, not baked.
-  const m = new Map<string, number>();
-  for (const it of o.order_items) if (Number(it.capacity_units_each) > 0) m.set(it.item_name, (m.get(it.item_name) ?? 0) + it.quantity);
-  return Array.from(m, ([name, qty]) => ({ name, qty }));
+  // Only pies count (sides are boxed, not baked), and only the ones not in the oven yet.
+  return pieLines(o)
+    .map((l) => ({ name: l.name, qty: l.qty - l.inOven }))
+    .filter((l) => l.qty > 0);
 }
 
 type Piece = { type: string; qty: number; order: number };
