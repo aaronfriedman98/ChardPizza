@@ -7,7 +7,7 @@ import type { MenuItem, Service, ServiceMenuItem } from "@/lib/types";
 import { centsToDollarsInput } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
 import { saveServiceMenu } from "../actions";
-import { NextStepLink } from "./stepper";
+import { NextStepLink, useUnsavedStep } from "./stepper";
 
 type Row = {
   menu_item_id: string;
@@ -45,11 +45,24 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
     setRows((rs) => rs.map((r) => (r.menu_item_id === id ? { ...r, ...patch } : r)));
   }
 
-  function save() {
+  // Unsaved = different from what was last saved. Next, the step tabs and Publish save it first.
+  const [saved, setSaved] = useState(() => JSON.stringify(rows));
+  const dirty = JSON.stringify(rows) !== saved;
+
+  async function persist() {
     setMsg(null);
+    const snap = JSON.stringify(rows);
+    const r = await saveServiceMenu(service.id, rows);
+    setMsg(r);
+    if (r.error) return false;
+    setSaved(snap);
+    return true;
+  }
+  useUnsavedStep(dirty, persist);
+
+  function save() {
     startTransition(async () => {
-      const r = await saveServiceMenu(service.id, rows);
-      setMsg(r);
+      await persist();
     });
   }
 
@@ -127,7 +140,7 @@ export function MenuStep({ service, library, serviceMenu }: { service: Service; 
         </button>
         {msg?.error && <span className="text-sm text-red-700">{msg.error}</span>}
         {msg?.ok && <span className="text-sm text-green-700">{msg.ok}</span>}
-        <NextStepLink serviceId={service.id} next="capacity" />
+        <NextStepLink serviceId={service.id} next="capacity" dirty={dirty} />
       </div>
     </div>
   );

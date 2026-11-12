@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Service, Settings } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { savePayment } from "../actions";
-import { NextStepLink } from "./stepper";
+import { NextStepLink, useUnsavedStep } from "./stepper";
 
 export function PaymentStep({ service: s, settings, cardReady }: { service: Service; settings: Settings; cardReady: boolean }) {
   const [cash, setCash] = useState(s.cash_enabled);
@@ -16,17 +16,29 @@ export function PaymentStep({ service: s, settings, cardReady }: { service: Serv
   const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
 
-  function save() {
+  const snapshot = JSON.stringify({ cash, zelle, card, special, instructions });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+
+  async function persist() {
     setMsg(null);
+    const r = await savePayment(s.id, {
+      cash_enabled: cash,
+      zelle_enabled: zelle,
+      card_enabled: card,
+      allow_special_instructions: special,
+      customer_instructions: instructions,
+    });
+    setMsg(r);
+    if (r.error) return false;
+    setSaved(snapshot);
+    return true;
+  }
+  useUnsavedStep(dirty, persist);
+
+  function save() {
     startTransition(async () => {
-      const r = await savePayment(s.id, {
-        cash_enabled: cash,
-        zelle_enabled: zelle,
-        card_enabled: card,
-        allow_special_instructions: special,
-        customer_instructions: instructions,
-      });
-      setMsg(r);
+      await persist();
     });
   }
 
@@ -85,7 +97,7 @@ export function PaymentStep({ service: s, settings, cardReady }: { service: Serv
         </button>
         {msg?.error && <span className="text-sm text-red-700">{msg.error}</span>}
         {msg?.ok && <span className="text-sm text-green-700">{msg.ok}</span>}
-        <NextStepLink serviceId={s.id} next="review" label="Review →" />
+        <NextStepLink serviceId={s.id} next="review" label="Review →" dirty={dirty} />
       </div>
     </div>
   );

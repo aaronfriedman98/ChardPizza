@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Service, ServiceAvailability, SlotAvailability } from "@/lib/types";
 import { fmtTime } from "@/lib/time";
 import { saveCapacitySettings, saveSlots } from "../actions";
-import { NextStepLink } from "./stepper";
+import { NextStepLink, useUnsavedStep } from "./stepper";
 
 type SlotRow = { id: string; capacity_units: number; preorder_cap_units: number | null; is_blocked: boolean };
 
@@ -43,31 +43,55 @@ export function CapacityStep({
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  function saveSettings(confirm = false) {
+  // Unsaved = different from what was last saved. Next, the step tabs and Publish save it first.
+  const totalsSnap = JSON.stringify({ total, slotMinutes, defaultCap, preorderMode, preorderValue });
+  const gridSnap = JSON.stringify(rows);
+  const [savedTotals, setSavedTotals] = useState(totalsSnap);
+  const [savedGrid, setSavedGrid] = useState(gridSnap);
+  const totalsDirty = totalsSnap !== savedTotals;
+  const gridDirty = gridSnap !== savedGrid;
+
+  async function persistTotals(confirm = false): Promise<boolean> {
     setMsg(null);
+    const r = await saveCapacitySettings(
+      s.id,
+      { pizza_capacity_total: total, slot_minutes: slotMinutes, default_slot_capacity: defaultCap, preorder_mode: preorderMode, preorder_value: preorderValue },
+      confirm,
+    );
+    if (r.needsConfirm) {
+      if (window.confirm(`${r.needsConfirm.join("\n")}\n\nSave anyway? Existing orders are kept.`)) return persistTotals(true);
+      return false;
+    }
+    setMsg(r);
+    if (r.error) return false;
+    setSavedTotals(totalsSnap);
+    return true;
+  }
+
+  async function persistGrid(confirm = false): Promise<boolean> {
+    setMsg(null);
+    const r = await saveSlots(s.id, rows, confirm);
+    if (r.needsConfirm) {
+      if (window.confirm(`${r.needsConfirm.join("\n")}\n\nSave anyway? Existing orders are kept.`)) return persistGrid(true);
+      return false;
+    }
+    setMsg(r);
+    if (r.error) return false;
+    setSavedGrid(gridSnap);
+    return true;
+  }
+
+  useUnsavedStep(totalsDirty || gridDirty, async () => (totalsDirty ? await persistTotals() : true) && (gridDirty ? await persistGrid() : true));
+
+  function saveSettings() {
     startTransition(async () => {
-      const r = await saveCapacitySettings(
-        s.id,
-        { pizza_capacity_total: total, slot_minutes: slotMinutes, default_slot_capacity: defaultCap, preorder_mode: preorderMode, preorder_value: preorderValue },
-        confirm,
-      );
-      if (r.needsConfirm) {
-        if (window.confirm(`${r.needsConfirm.join("\n")}\n\nSave anyway? Existing orders are kept.`)) saveSettings(true);
-        return;
-      }
-      setMsg(r);
+      await persistTotals();
     });
   }
 
-  function saveGrid(confirm = false) {
-    setMsg(null);
+  function saveGrid() {
     startTransition(async () => {
-      const r = await saveSlots(s.id, rows, confirm);
-      if (r.needsConfirm) {
-        if (window.confirm(`${r.needsConfirm.join("\n")}\n\nSave anyway? Existing orders are kept.`)) saveGrid(true);
-        return;
-      }
-      setMsg(r);
+      await persistGrid();
     });
   }
 
@@ -189,7 +213,7 @@ export function CapacityStep({
           </button>
           {msg?.error && <span className="text-sm text-red-700">{msg.error}</span>}
           {msg?.ok && <span className="text-sm text-green-700">{msg.ok}</span>}
-          <NextStepLink serviceId={s.id} next="fulfillment" />
+          <NextStepLink serviceId={s.id} next="fulfillment" dirty={totalsDirty || gridDirty} />
         </div>
       </section>
     </div>

@@ -64,7 +64,7 @@ export default function GuidePage() {
       <Section id="before" title="2. Before the night">
         <ol>
           <li>
-            <b>Publish the sale</b> under <Link href="/admin/services">Services</Link>. Until it is published the website shows &ldquo;Nothing cooking&rdquo; and no order can come in.
+            <b>Publish the sale</b> under <Link href="/admin/services">Services</Link>. Until it is published the website shows &ldquo;Nothing cooking&rdquo; and no order can come in. Setting it up, you never lose a pick: <b>Next</b> turns into <b>Save &amp; next</b> when a step has changes, and the step tabs and <b>Publish</b> save the step you are on first.
           </li>
           <li>
             <b>Share it</b>: open the sale, then Share. Copy the WhatsApp message (it lists the menu and open times live) and download the flyer.

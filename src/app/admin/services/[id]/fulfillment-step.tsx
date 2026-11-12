@@ -6,7 +6,7 @@ import type { DeliveryZone, Service, ServiceDeliveryZone } from "@/lib/types";
 import { centsToDollarsInput, formatCents } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
 import { saveFulfillment } from "../actions";
-import { NextStepLink } from "./stepper";
+import { NextStepLink, useUnsavedStep } from "./stepper";
 
 export function FulfillmentStep({ service: s, zones, serviceZones }: { service: Service; zones: DeliveryZone[]; serviceZones: ServiceDeliveryZone[] }) {
   const [pickup, setPickup] = useState(s.pickup_enabled);
@@ -22,15 +22,27 @@ export function FulfillmentStep({ service: s, zones, serviceZones }: { service: 
   const [pending, startTransition] = useBusyTransition();
   const [msg, setMsg] = useState<{ error?: string; ok?: string } | null>(null);
 
-  function save() {
+  const snapshot = JSON.stringify({ pickup, delivery, selected });
+  const [saved, setSaved] = useState(snapshot);
+  const dirty = snapshot !== saved;
+
+  async function persist() {
     setMsg(null);
+    const r = await saveFulfillment(s.id, {
+      pickup_enabled: pickup,
+      delivery_enabled: delivery,
+      zones: delivery ? Object.entries(selected).filter(([, v]) => v.on).map(([id, v]) => ({ delivery_zone_id: id, fee_override: v.fee })) : [],
+    });
+    setMsg(r);
+    if (r.error) return false;
+    setSaved(snapshot);
+    return true;
+  }
+  useUnsavedStep(dirty, persist);
+
+  function save() {
     startTransition(async () => {
-      const r = await saveFulfillment(s.id, {
-        pickup_enabled: pickup,
-        delivery_enabled: delivery,
-        zones: delivery ? Object.entries(selected).filter(([, v]) => v.on).map(([id, v]) => ({ delivery_zone_id: id, fee_override: v.fee })) : [],
-      });
-      setMsg(r);
+      await persist();
     });
   }
 
@@ -100,7 +112,7 @@ export function FulfillmentStep({ service: s, zones, serviceZones }: { service: 
         </button>
         {msg?.error && <span className="text-sm text-red-700">{msg.error}</span>}
         {msg?.ok && <span className="text-sm text-green-700">{msg.ok}</span>}
-        <NextStepLink serviceId={s.id} next="payment" />
+        <NextStepLink serviceId={s.id} next="payment" dirty={dirty} />
       </div>
     </div>
   );

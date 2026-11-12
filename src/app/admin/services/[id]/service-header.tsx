@@ -8,6 +8,7 @@ import { publicState, STATE_LABEL, STATE_TONE, STATUS_LABEL } from "@/lib/servic
 import Link from "next/link";
 import { DuplicateButton } from "../duplicate-button";
 import { setOrderingOverride, setServiceStatus, setSoldOut } from "../actions";
+import { saveCurrentStep } from "./stepper";
 
 export function ServiceHeader({
   service: s,
@@ -65,7 +66,14 @@ export function ServiceHeader({
 
       <div className="flex flex-wrap gap-2">
         {s.status === "draft" && (
-          <button className="btn-primary" disabled={pending} onClick={() => run(() => setServiceStatus(s.id, "scheduled"))}>
+          <button className="btn-primary" disabled={pending} onClick={() =>
+              run(async () => {
+                // Publish what's on screen: save this step's changes first.
+                if (!(await saveCurrentStep())) return { error: "This step didn't save. Fix it below, then Publish." };
+                return setServiceStatus(s.id, "scheduled");
+              })
+            }
+          >
             Publish
           </button>
         )}
