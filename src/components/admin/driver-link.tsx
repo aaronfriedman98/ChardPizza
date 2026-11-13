@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 
-// Copy or text the driver's link for tonight. She needs no login.
+// Copy or text the driver's link. Same link every week: it always opens the current sale. No login.
 export function DriverLink({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
-  const text = `Tonight's deliveries (addresses, maps, and tap Delivered as you go): ${url}`;
+  const text = `Char'd deliveries (addresses, maps, and tap Delivered as you go). Save this link, it's the same every week: ${url}`;
   return (
     <div className="card flex flex-wrap items-center gap-2 py-3">
       <div className="mr-auto min-w-0">
         <div className="font-semibold">🚗 Driver link</div>
-        <div className="text-xs text-ink/60">Her own page for tonight: every delivery, Waze and Google Maps, call or text, mark delivered. No login.</div>
+        <div className="text-xs text-ink/60">Same link every week. It always opens the current sale: every delivery, Waze and Google Maps, call or text, mark delivered. No login.</div>
       </div>
       <button
         type="button"

@@ -225,7 +225,7 @@ export default function GuidePage() {
           <b>Handoff</b> is the door. Pickup orders only, in three folds: <b>Ready to hand out</b>, <b>Coming up</b>, and <b>Picked up</b>. Someone says their name, you type two letters in the search, see PAID or CASH DUE, tap <Key>Picked up</Key>. Phone numbers are tap-to-call.
         </p>
         <p>
-          <b>Delivery</b> is the same idea for the driver: <b>Out for delivery</b>, <b>Ready to go</b>, <b>Coming up</b>, <b>Delivered</b>, with the address and notes on each card.
+          <b>Delivery</b> is the same idea for the driver: <b>Out for delivery</b>, <b>Ready to go</b>, <b>Coming up</b>, <b>Delivered</b>, with the address and notes on each card. At the top is the <b>🚗 Driver link</b>: send it to your driver once (Copy, Text it, or WhatsApp). It is the same link every week and always opens the current sale, so she can keep it saved. It stays on tonight&rsquo;s deliveries until 6 hours after the sale ends, then moves to the next one.
         </p>
       </Section>
 

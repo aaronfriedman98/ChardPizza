@@ -4,7 +4,7 @@ import { pickOpsService } from "@/lib/ops";
 import { loadServiceOrders } from "@/lib/orders";
 import { OpsList } from "@/components/admin/ops-list";
 import { DriverLink } from "@/components/admin/driver-link";
-import { driverPath } from "@/lib/driver";
+import { driverWeeklyPath } from "@/lib/driver";
 
 export const metadata = { title: "Delivery | Char'd Pizza" };
 
@@ -12,10 +12,13 @@ export default async function DeliveryPage({ searchParams }: PageProps<"/admin/d
   const { service: sid } = await searchParams;
   const { supabase } = await requireAdmin();
   const { settings, service } = await pickOpsService(supabase, typeof sid === "string" ? sid : undefined);
+  // One link for the driver that never changes; it always opens the current sale.
+  const driverUrl = `${(settings.public_url || "https://chardpizza.netlify.app").replace(/\/$/, "")}${driverWeeklyPath()}`;
   if (!service) {
     return (
       <div className="space-y-4">
         <h1 className="page-title">Delivery</h1>
+        <DriverLink url={driverUrl} />
         <div className="card text-ink/70">
           No published service. <Link href="/admin/services" className="text-ember hover:underline">Services</Link>
         </div>
@@ -23,7 +26,6 @@ export default async function DeliveryPage({ searchParams }: PageProps<"/admin/d
     );
   }
   const orders = await loadServiceOrders(supabase, service.id);
-  const driverUrl = `${(settings.public_url || "https://chardpizza.netlify.app").replace(/\/$/, "")}${driverPath(service.id)}`;
   return (
     <div className="space-y-4">
     <DriverLink url={driverUrl} />
