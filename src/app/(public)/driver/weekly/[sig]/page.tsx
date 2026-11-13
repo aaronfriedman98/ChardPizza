@@ -10,28 +10,32 @@ export const metadata = { title: "Deliveries | Char'd Pizza", robots: { index: f
 
 const HOUR = 60 * 60 * 1000;
 
-// The driver's link that never changes: it always opens the current sale night.
-export default async function DriverWeeklyPage({ params }: { params: Promise<{ sig: string }> }) {
-  const { sig } = await params;
-  if (!driverWeeklyOk(sig)) notFound();
-
+// Tonight's sale while it runs, and for 6 hours after it ends so late deliveries stay put.
+// Then the next one coming up.
+async function currentSale() {
   const db = createAdminClient();
   const now = Date.now();
   const { data } = await db
     .from("services")
     .select("id, status, starts_at, ends_at")
-    .in("status", ["scheduled", "live", "completed"])
+    .in("status", ["scheduled", "live"])
     .gt("ends_at", new Date(now - 3 * 24 * HOUR).toISOString())
     .order("starts_at");
   const list = (data ?? []) as { id: string; status: string; starts_at: string; ends_at: string }[];
   const t = (iso: string) => new Date(iso).getTime();
-
-  // Tonight's sale while it runs, and for 6 hours after it ends so late deliveries stay put.
-  // Then the next one coming up.
-  const pick =
+  return (
     list.find((s) => s.status === "live") ??
-    list.find((s) => t(s.starts_at) - 6 * HOUR <= now && t(s.ends_at) + 6 * HOUR > now && s.status !== "completed") ??
-    list.find((s) => s.status === "scheduled" && t(s.ends_at) > now);
+    list.find((s) => t(s.starts_at) - 6 * HOUR <= now && t(s.ends_at) + 6 * HOUR > now) ??
+    list.find((s) => t(s.ends_at) > now)
+  );
+}
+
+// The driver's link that never changes: it always opens the current sale night.
+export default async function DriverWeeklyPage({ params }: { params: Promise<{ sig: string }> }) {
+  const { sig } = await params;
+  if (!driverWeeklyOk(sig)) notFound();
+
+  const pick = await currentSale();
 
   if (pick) return <DriverNight serviceId={pick.id} />;
 
